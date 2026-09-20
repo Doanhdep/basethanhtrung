@@ -1,4 +1,4 @@
-﻿            document.addEventListener('DOMContentLoaded', function () {
+            document.addEventListener('DOMContentLoaded', function () {
                 const materialsSwiperElement = document.querySelector('.materials-grid-swiper');
                 let materialsSwiperInstance = null;
 
@@ -13,11 +13,11 @@
                     const totalSlides = materialsSwiperElement.querySelectorAll('.swiper-slide:not(.swiper-slide-duplicate)').length;
 
                     materialsSwiperInstance = new Swiper(materialsSwiperElement, {
-                        speed: 520,
+                        speed: 420,
 
                         loop: totalSlides > 4,
                         rewind: false,
-                        loopAdditionalSlides: 4,
+                        loopAdditionalSlides: 2,
                         loopPreventsSliding: false,
 
                         slidesPerView: 1,
@@ -29,41 +29,25 @@
                         simulateTouch: true,
                         followFinger: true,
 
-                        freeMode: {
-                            enabled: true,
-                            momentum: true,
-                            momentumRatio: 0.5,
-                            momentumVelocityRatio: 0.72,
-                            minimumVelocity: 0.02,
-                            momentumBounce: false,
-                            sticky: true
-                        },
-                        centeredSlides: false,
-                        roundLengths: true,
-
-                        touchEventsTarget: 'container',
-                        touchRatio: 1.16,
-                        touchAngle: 28,
-                        threshold: 3,
+                        // Vuốt lướt nhạy, êm ái, góc chạm tự nhiên 45 độ
+                        touchRatio: 1,
+                        touchAngle: 45,
+                        threshold: 5,
 
                         longSwipes: true,
-                        longSwipesRatio: 0.12,
-                        longSwipesMs: 180,
+                        longSwipesRatio: 0.15,
+                        longSwipesMs: 220,
                         shortSwipes: true,
 
                         resistance: true,
-                        resistanceRatio: 0.9,
+                        resistanceRatio: 0.85,
 
                         preventClicks: true,
                         preventClicksPropagation: true,
-
                         touchStartPreventDefault: false,
-                        touchMoveStopPropagation: true,
-                        touchReleaseOnEdges: false,
 
                         observer: true,
                         observeParents: true,
-                        updateOnWindowResize: true,
                         watchOverflow: true,
 
                         autoplay: false,
@@ -92,26 +76,19 @@
                         },
 
                         on: {
-                            init: function () {
-                                this.update();
-                            },
-
                             touchStart: function () {
                                 isDraggingSlides = false;
                                 materialsSwiperElement.classList.add('swiper-grabbing');
                             },
 
-                            sliderFirstMove: function () {
+                            sliderMove: function () {
                                 isDraggingSlides = true;
-                                suppressClickUntil = Date.now() + 500;
-                                materialsSwiperElement.classList.add('swiper-grabbing');
+                                suppressClickUntil = Date.now() + 350;
                             },
 
                             touchEnd: function () {
                                 materialsSwiperElement.classList.remove('swiper-grabbing');
                                 document.body.classList.remove('swiper-grabbing');
-
-                                suppressClickUntil = Date.now() + (isDraggingSlides ? 500 : 0);
 
                                 setTimeout(function () {
                                     isDraggingSlides = false;
@@ -121,10 +98,6 @@
                             transitionEnd: function () {
                                 materialsSwiperElement.classList.remove('swiper-grabbing');
                                 document.body.classList.remove('swiper-grabbing');
-                            },
-
-                            resize: function () {
-                                this.update();
                             }
                         }
                     });
@@ -133,40 +106,13 @@
                         materialsSwiperElement.classList.remove('swiper-grabbing');
                         document.body.classList.remove('swiper-grabbing');
 
-                        if (materialsSwiperInstance) {
-                            materialsSwiperInstance.allowTouchMove = true;
-                            materialsSwiperInstance.allowClick = true;
-                            materialsSwiperInstance.update();
-                        }
-
                         setTimeout(function () {
                             isDraggingSlides = false;
                         }, 60);
                     };
 
-                    [
-                        'mouseup',
-                        'pointerup',
-                        'pointercancel',
-                        'touchend',
-                        'touchcancel',
-                        'dragend',
-                        'mouseleave',
-                        'blur'
-                    ].forEach(function (eventName) {
+                    ['mouseup', 'pointerup', 'touchend', 'touchcancel'].forEach(function (eventName) {
                         window.addEventListener(eventName, forceReleaseDraggingState, { passive: true });
-                    });
-
-                    [
-                        'mouseup',
-                        'pointerup',
-                        'pointercancel',
-                        'touchend',
-                        'touchcancel',
-                        'mouseleave',
-                        'lostpointercapture'
-                    ].forEach(function (eventName) {
-                        materialsSwiperElement.addEventListener(eventName, forceReleaseDraggingState, { passive: true });
                     });
 
                     materialsSwiperElement.addEventListener('pointerdown', function (event) {
@@ -174,35 +120,13 @@
                         pointerDownY = event.clientY;
                         isDraggingSlides = false;
                         isPointerDownInSwiper = true;
-
-                        hoverRotationTimers = hoverRotationTimers || new WeakMap();
-                        materialsSwiperElement.querySelectorAll('.materials-hover-image').forEach(function (img) {
-                            const timer = hoverRotationTimers.get(img);
-                            if (timer) {
-                                clearInterval(timer);
-                                hoverRotationTimers.delete(img);
-                            }
-                            if (img.dataset.defaultImage) {
-                                img.src = img.dataset.defaultImage;
-                            }
-                        });
                     }, { passive: true });
 
-                    ['pointerup', 'pointercancel', 'touchend', 'touchcancel', 'lostpointercapture', 'mouseup'].forEach(function (eventName) {
+                    ['pointerup', 'pointercancel', 'touchend', 'touchcancel'].forEach(function (eventName) {
                         materialsSwiperElement.addEventListener(eventName, function () {
                             isPointerDownInSwiper = false;
                         }, { passive: true });
                     });
-
-                    materialsSwiperElement.addEventListener('pointermove', function (event) {
-                        const dx = Math.abs(event.clientX - pointerDownX);
-                        const dy = Math.abs(event.clientY - pointerDownY);
-
-                        if (dx > 4 && dx > dy) {
-                            isDraggingSlides = true;
-                            suppressClickUntil = Date.now() + 500;
-                        }
-                    }, { passive: true });
 
                     materialsSwiperElement.querySelectorAll('img, a').forEach(function (node) {
                         node.setAttribute('draggable', 'false');

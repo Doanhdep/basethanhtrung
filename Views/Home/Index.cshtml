@@ -1,4 +1,4 @@
-﻿ @using System.IO
+ @using System.IO
 @inject WebThuMuaPheLieu.Services.IStructuredDataService StructuredDataService
 @model WebThuMuaPheLieu.ViewModels.HomeIndexViewModel
 @{
@@ -252,8 +252,7 @@
             #materials .materials-grid-swiper .swiper-wrapper {
                 align-items: stretch;
                 will-change: transform;
-                transition-property: transform;
-                transition-timing-function: cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+                transform: translateZ(0);
             }
 
             #materials .materials-grid-swiper .swiper-slide {
@@ -479,7 +478,7 @@
             </div>
         }
 
-        <script defer src="~/assets/js/home-materials.js"></script>
+        <script defer src="~/assets/js/home-materials.js" asp-append-version="true"></script>
 
         @functions {
             string GetCategoryIcon(string? categoryName)

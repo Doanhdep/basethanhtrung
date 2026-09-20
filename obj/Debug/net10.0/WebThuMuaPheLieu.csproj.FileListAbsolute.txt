@@ -3476,3 +3476,4 @@ C:\Users\Hoang Dinh Doanh\Desktop\project\PheLieuThanhTrung\basethanhtrung\obj\D
 C:\Users\Hoang Dinh Doanh\Desktop\project\PheLieuThanhTrung\basethanhtrung\obj\Debug\net10.0\WebThuMuaPheLieu.pdb
 C:\Users\Hoang Dinh Doanh\Desktop\project\PheLieuThanhTrung\basethanhtrung\obj\Debug\net10.0\WebThuMuaPheLieu.genruntimeconfig.cache
 C:\Users\Hoang Dinh Doanh\Desktop\project\PheLieuThanhTrung\basethanhtrung\obj\Debug\net10.0\ref\WebThuMuaPheLieu.dll
+C:\Users\Hoang Dinh Doanh\Desktop\project\PheLieuThanhTrung\basethanhtrung\obj\Debug\net10.0\WebThuMuaPheLieu.sourcelink.json
