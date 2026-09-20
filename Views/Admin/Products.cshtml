@@ -1,0 +1,1668 @@
+@model WebThuMuaPheLieu.ViewModels.AdminProductsViewModel
+
+@{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    var successMessage = TempData["AdminProductsSuccess"] as string;
+    var errorMessage = TempData["AdminProductsError"] as string;
+    var editor = Model.Editor;
+    var routeProductId = !Model.IsCreateMode && editor.Id.HasValue ? editor.Id : null;
+    var routeCategoryId = Model.IsCreateMode ? editor.CategoryId : null;
+    var routeCategoryEditId = Model.CategoryEditor.Id;
+    var routeCreate = Model.ShowEditor && Model.IsCreateMode;
+    var searchTerm = Model.SearchTerm;
+    var pageWindowStart = Math.Max(1, Model.CurrentPage - 2);
+    var pageWindowEnd = Math.Min(Model.TotalPages, pageWindowStart + 4);
+    pageWindowStart = Math.Max(1, pageWindowEnd - 4);
+}
+
+<header class="topbar" id="products-section">
+    <div class="topbar__title-wrap">
+        <button class="sidebar-toggle" type="button" aria-label="Mở menu">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        <div>
+            <p class="eyebrow">Admin / Products</p>
+            <h2>Quản lý sản phẩm</h2>
+            <div class="overview-hero__chips">
+                <span>@Model.Products.Count sản phẩm</span>
+                <span>@Model.Categories.Count loại sản phẩm</span>
+                <span>@(Model.Products.Count(product => product.IsFeatured)) nổi bật</span>
+             
+            </div>
+        </div>
+    </div>
+    <div class="topbar__actions admin-products-top-actions">
+        <a class="admin-toolbar-button admin-toolbar-button--ghost"
+           asp-controller="Admin"
+           asp-action="Products"
+           asp-route-search="@searchTerm"
+           asp-route-manageCategories="true">
+            <span class="admin-toolbar-button__icon">▦</span>
+            <span>
+                <strong>Quản lý loại</strong>
+                <small>Thêm, sửa, xóa loại sản phẩm</small>
+            </span>
+        </a>
+        <a class="admin-toolbar-button admin-toolbar-button--primary"
+           asp-controller="Admin"
+           asp-action="Products"
+           asp-route-search="@searchTerm"
+           asp-route-create="true">
+            <span class="admin-toolbar-button__icon">＋</span>
+            <span>
+                <strong>Thêm sản phẩm</strong>
+                <small>Mở popup tạo sản phẩm mới</small>
+            </span>
+        </a>
+    </div>
+</header>
+
+@if (!string.IsNullOrWhiteSpace(successMessage))
+{
+    <div class="admin-products-alert admin-products-alert--success">@successMessage</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="admin-products-alert admin-products-alert--error">@errorMessage</div>
+}
+
+<div class="admin-products-layout">
+    <section class="panel panel--products admin-products-panel admin-products-list-panel">
+        <div class="panel__head admin-products-panel__head">
+            <div>
+                <p class="eyebrow">Danh sách</p>
+                <h3>Tất cả sản phẩm</h3>
+            </div>
+            <div class="admin-products-summary">
+                <span class="admin-products-summary__item">Có ảnh: @Model.Products.Count(product => product.ImageCount > 0)</span>
+                <span class="admin-products-summary__item">Ẩn: @Model.Products.Count(product => product.Status == "inactive")</span>
+                <span class="admin-products-summary__item">Hiển thị @Model.StartItemIndex-@Model.EndItemIndex / @Model.TotalProducts</span>
+            </div>
+        </div>
+
+        <form method="get" asp-controller="Admin" asp-action="Products" class="admin-filter-toolbar">
+            <input type="hidden" name="page" value="1" />
+            <input type="hidden" name="id" value="@routeProductId" />
+            <input type="hidden" name="categoryId" value="@routeCategoryId" />
+            <input type="hidden" name="categoryEditId" value="@routeCategoryEditId" />
+            <input type="hidden" name="manageCategories" value="@Model.ShowCategoryManager" />
+            <input type="hidden" name="create" value="@routeCreate" />
+
+            <label class="search-box admin-filter-toolbar__search" aria-label="Tìm sản phẩm">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="7"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text"
+                       name="search"
+                       value="@searchTerm"
+                       placeholder="Tìm theo tên, slug, category, trạng thái, mô tả..." />
+            </label>
+
+            <div class="admin-filter-toolbar__buttons">
+                <button type="submit" class="admin-filter-toolbar__submit">Lọc dữ liệu</button>
+                <a asp-controller="Admin"
+                   asp-action="Products"
+                   asp-route-id="@routeProductId"
+                   asp-route-categoryId="@routeCategoryId"
+                   asp-route-categoryEditId="@routeCategoryEditId"
+                   asp-route-manageCategories="@Model.ShowCategoryManager"
+                   asp-route-create="@routeCreate"
+                   class="admin-filter-toolbar__reset">Làm mới</a>
+            </div>
+        </form>
+
+        <div class="table-shell">
+            <table class="product-table admin-products-table">
+                <thead>
+                    <tr>
+                        <th>Sản phẩm</th>
+                        <th>Danh mục</th>
+                        <th>Giá</th>
+                        <th>Ảnh</th>
+                        <th>Trạng thái</th>
+                        <th>Cập nhật</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Products.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="7">
+                                <div class="admin-products-empty">
+                                    <strong>Chưa có sản phẩm nào</strong>
+                                    <span>Hãy bấm nút thêm sản phẩm ở phía trên để mở popup tạo sản phẩm đầu tiên.</span>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var product in Model.Products)
+                        {
+                            var statusClass = product.Status switch
+                            {
+                                "active" => "status status--success",
+                                "inactive" => "status status--warning",
+                                _ => "status status--accent"
+                            };
+
+                            var statusText = product.Status switch
+                            {
+                                "active" => "Đang hiển thị",
+                                "inactive" => "Tạm ẩn",
+                                _ => "Nháp"
+                            };
+
+                            <tr class="@(editor.Id == product.Id ? "is-selected" : string.Empty)">
+                                <td>
+                                    <div class="product-info admin-product-item">
+                                        <div class="admin-product-item__thumb">
+                                            @if (!string.IsNullOrWhiteSpace(product.PrimaryImage))
+                                            {
+                                                <img src="@Url.Content(product.PrimaryImage)" alt="@product.Name" />
+                                            }
+                                            else
+                                            {
+                                                <span>IMG</span>
+                                            }
+                                        </div>
+                                        <div>
+                                            <strong>@product.Name</strong>
+                                            <span>Slug: @product.Slug</span>
+                                            @if (product.IsFeatured)
+                                            {
+                                                <span class="tag tag--copper">Nổi bật</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>@(string.IsNullOrWhiteSpace(product.CategoryName) ? "Chưa phân loại" : product.CategoryName)</td>
+                                <td>
+                                    <strong>@(product.PriceValue?.ToString("N0") ?? "Chưa có")</strong>
+                                    <span>@(string.IsNullOrWhiteSpace(product.Unit) ? string.Empty : $"/{product.Unit}")</span>
+                                    @if (!string.IsNullOrWhiteSpace(product.PriceLabel))
+                                    {
+                                        <div class="admin-products-price-label">@product.PriceLabel</div>
+                                    }
+                                </td>
+                                <td>@product.ImageCount ảnh</td>
+                                <td><span class="@statusClass">@statusText</span></td>
+                                <td>@(product.UpdatedAt?.ToString("dd/MM/yyyy HH:mm") ?? "Chưa cập nhật")</td>
+                                <td>
+                                    <div class="admin-products-actions">
+                                        <a class="table-action table-action--edit"
+                                           asp-controller="Admin"
+                                           asp-action="Products"
+                                           asp-route-id="@product.Id">Chi tiết / Sửa</a>
+                                        <form asp-controller="Admin"
+                                              asp-action="DeleteProduct"
+                                              asp-route-id="@product.Id"
+                                              method="post"
+                                              onsubmit="return confirm('Xóa sản phẩm này?');">
+                                            @Html.AntiForgeryToken()
+                                            <button class="table-action table-action--delete" type="submit">Xóa</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (Model.TotalPages > 1)
+        {
+            <div class="admin-products-pagination">
+                <div class="admin-products-pagination__summary">
+                    <span class="admin-products-pagination__eyebrow">Điều hướng danh sách</span>
+                    <strong>Trang @Model.CurrentPage / @Model.TotalPages</strong>
+                    <span>Đang hiển thị @Model.StartItemIndex-@Model.EndItemIndex trong tổng số @Model.TotalProducts sản phẩm</span>
+                </div>
+                <div class="admin-products-pagination__actions">
+                    <a class="admin-products-pagination__button @(Model.HasPreviousPage ? string.Empty : "is-disabled")"
+                       asp-controller="Admin"
+                       asp-action="Products"
+                       asp-route-page="@(Model.CurrentPage - 1)"
+                       asp-route-id="@routeProductId"
+                       asp-route-categoryId="@routeCategoryId"
+                       asp-route-manageCategories="@Model.ShowCategoryManager"
+                       asp-route-create="@routeCreate"
+                       asp-route-search="@searchTerm"
+                       asp-route-categoryEditId="@routeCategoryEditId"
+                       aria-disabled="@(!Model.HasPreviousPage)">
+                        <span class="admin-products-pagination__button-icon">←</span>
+                        <span>Trước</span>
+                    </a>
+
+                    @for (var pageNumber = pageWindowStart; pageNumber <= pageWindowEnd; pageNumber++)
+                    {
+                        <a class="admin-products-pagination__button @(pageNumber == Model.CurrentPage ? "is-active" : string.Empty)"
+                           asp-controller="Admin"
+                           asp-action="Products"
+                           asp-route-page="@pageNumber"
+                           asp-route-id="@routeProductId"
+                           asp-route-categoryId="@routeCategoryId"
+                           asp-route-manageCategories="@Model.ShowCategoryManager"
+                           asp-route-create="@routeCreate"
+                           asp-route-search="@searchTerm"
+                           asp-route-categoryEditId="@routeCategoryEditId">
+                            @pageNumber
+                        </a>
+                    }
+
+                    <a class="admin-products-pagination__button @(Model.HasNextPage ? string.Empty : "is-disabled")"
+                       asp-controller="Admin"
+                       asp-action="Products"
+                       asp-route-page="@(Model.CurrentPage + 1)"
+                       asp-route-id="@routeProductId"
+                       asp-route-categoryId="@routeCategoryId"
+                       asp-route-manageCategories="@Model.ShowCategoryManager"
+                       asp-route-create="@routeCreate"
+                       asp-route-search="@searchTerm"
+                       asp-route-categoryEditId="@routeCategoryEditId"
+                       aria-disabled="@(!Model.HasNextPage)">
+                        <span>Sau</span>
+                        <span class="admin-products-pagination__button-icon">→</span>
+                    </a>
+                </div>
+            </div>
+        }
+    </section>
+
+    @if (Model.ShowEditor)
+    {
+        <div class="admin-products-modal" id="admin-products-modal" role="dialog" aria-modal="true" aria-labelledby="admin-products-modal-title">
+            <div class="admin-products-modal__backdrop">
+                <a class="admin-products-modal__close-hit" asp-controller="Admin" asp-action="Products" aria-label="Đóng popup"></a>
+            </div>
+            <section class="panel panel--products admin-products-panel admin-products-editor-panel admin-products-modal__dialog">
+                <div class="panel__head admin-products-panel__head admin-products-modal-hero admin-products-modal-hero--emerald">
+                    <div>
+                        <p class="eyebrow">Biểu mẫu quản lý</p>
+                        <h3 id="admin-products-modal-title">@(Model.IsCreateMode ? "Thêm sản phẩm mới" : "Xem chi tiết / chỉnh sửa")</h3>
+                        <span>Điền và cập nhật thông tin sản phẩm với bố cục nổi bật, dễ nhìn hơn.</span>
+                    </div>
+                    <div class="panel__head-actions">
+                        <a class="admin-products-modal-button admin-products-modal-button--ghost-light" asp-controller="Admin" asp-action="Products">Đóng</a>
+                    </div>
+                </div>
+
+                <form asp-controller="Admin"
+                      asp-action="SaveProduct"
+                      method="post"
+                      enctype="multipart/form-data"
+                      class="admin-products-form">
+                    @Html.AntiForgeryToken()
+                    <input asp-for="Editor.Id" type="hidden" />
+                    <input asp-for="Editor.PrimaryImage" type="hidden" />
+
+                    <div class="admin-form-section">
+                        <div class="admin-form-section__head">
+                            <h4>Thông tin cơ bản</h4>
+                            <p>Nhập đầy đủ các thuộc tính chính của sản phẩm theo model hiện tại.</p>
+                        </div>
+                        <div class="admin-form-grid admin-form-grid--2">
+                            <label class="admin-field">
+                                <span>Tên sản phẩm *</span>
+                                <input asp-for="Editor.Name" type="text" maxlength="255" placeholder="Ví dụ: Đồng đỏ loại 1" />
+                            </label>
+                            <label class="admin-field">
+                                <span>Slug</span>
+                                <input asp-for="Editor.Slug" type="text" maxlength="255" placeholder="Tự tạo nếu để trống" />
+                            </label>
+                            <label class="admin-field admin-field--full">
+                                <span>SEO Keyword</span>
+                                <input asp-for="Editor.SeoKeyword" type="text" maxlength="255" placeholder="đồng đỏ phế liệu, giá đồng đỏ phế liệu, mua bán đồng đỏ" />
+                                <small>Nhập nhiều keyword bằng dấu phẩy để render meta keywords riêng cho sản phẩm.</small>
+                            </label>
+                            <label class="admin-field admin-field--full">
+                                <span>Mô tả ngắn</span>
+                                <textarea asp-for="Editor.ShortDescription" rows="3" maxlength="1000" placeholder="Tóm tắt ngắn gọn để hiển thị trong danh sách"></textarea>
+                            </label>
+                            <label class="admin-field admin-field--full">
+                                <span>Mô tả chi tiết</span>
+                                <div class="posts-rich-editor-shell is-loading" data-product-rich-editor-shell>
+                                    <div class="posts-rich-editor-toolbar">
+                                        <strong>Soạn mô tả chi tiết như Word</strong>
+                                        <span data-product-rich-editor-status>Đang tải trình soạn thảo trực quan...</span>
+                                    </div>
+                                    <div class="posts-editor-capabilities" aria-label="Tính năng trình soạn thảo mô tả sản phẩm">
+                                        <span>H1 · H2 · H3</span>
+                                        <span>In đậm / in nghiêng</span>
+                                        <span>Danh sách</span>
+                                        <span>Chèn link</span>
+                                        <span>Chèn ảnh trực tiếp</span>
+                                    </div>
+                                    <textarea asp-for="Editor.Description"
+                                              rows="5"
+                                              maxlength="20000"
+                                              class="posts-textarea posts-textarea--editor"
+                                              placeholder="Thông tin chi tiết về sản phẩm"
+                                              data-product-rich-editor></textarea>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="admin-form-section">
+                        <div class="admin-form-section__head">
+                            <h4>Giá & trạng thái</h4>
+                            <p>Khi thay đổi giá trị giá, hệ thống sẽ tự lưu giá cũ vào lịch sử giá.</p>
+                        </div>
+                        <div class="admin-form-grid admin-form-grid--3">
+                            <label class="admin-field">
+                                <span>Giá trị giá (PriceValue)</span>
+                                <input asp-for="Editor.PriceValue" type="number" step="0.01" min="0" placeholder="0" />
+                            </label>
+                            <label class="admin-field">
+                                <span>Đơn vị</span>
+                                <input asp-for="Editor.Unit" type="text" placeholder="kg, tấn, chiếc..." />
+                            </label>
+                            <label class="admin-field">
+                                <span>Nhãn giá</span>
+                                <input asp-for="Editor.PriceLabel" type="text" placeholder="Ví dụ: Giá thu mua hôm nay" />
+                            </label>
+                            <label class="admin-field">
+                                <span>Trạng thái</span>
+                                <select asp-for="Editor.Status" asp-items="Model.StatusOptions"></select>
+                            </label>
+                            <label class="admin-field admin-field--checkbox">
+                                <span>Đánh dấu nổi bật</span>
+                                <input asp-for="Editor.IsFeatured" type="checkbox" />
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="admin-form-section">
+                        <div class="admin-form-section__head">
+                            <h4>Loại sản phẩm / danh mục</h4>
+                            <p>Chọn loại sản phẩm có sẵn cho sản phẩm này. Quản lý thêm, sửa, xóa loại ở nút riêng trên đầu trang.</p>
+                        </div>
+                        <div class="admin-form-grid admin-form-grid--2">
+                            <label class="admin-field">
+                                <span>Loại sản phẩm</span>
+                                <select asp-for="Editor.CategoryId" asp-items="Model.CategoryOptions"></select>
+                            </label>
+                            <div class="admin-inline-card admin-inline-card--hint">
+                                <h5>Quản lý loại riêng</h5>
+                                <p>Muốn thêm loại mới hoặc chỉnh sửa danh mục hiện có, hãy mở mục <strong>Quản lý loại</strong> ở góc phải phía trên.</p>
+                                <div class="admin-products-actions">
+                                    <a class="admin-products-modal-button admin-products-modal-button--secondary"
+                                       asp-controller="Admin"
+                                       asp-action="Products"
+                                       asp-route-manageCategories="true">Mở quản lý loại</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="admin-form-section">
+                        <div class="admin-form-section__head">
+                            <h4>Ảnh sản phẩm</h4>
+                            <p>Kéo/thả nhiều ảnh hoặc bấm để chọn. Ảnh sẽ được lưu tự động vào thư mục <code>~/assets/images/products/</code>.</p>
+                        </div>
+
+                        <label class="admin-upload-dropzone" id="product-upload-dropzone">
+                            <input asp-for="Editor.UploadedImages" id="product-upload-input" type="file" accept=".jpg,.jpeg,.png,.webp" multiple />
+                            <span class="admin-upload-dropzone__title">Kéo & thả nhiều ảnh vào đây</span>
+                            <span class="admin-upload-dropzone__hint">Hoặc bấm để chọn ảnh. Tối đa 10 ảnh/sản phẩm, mỗi ảnh ≤ 5MB, tổng mỗi lần upload ≤ 20MB.</span>
+                        </label>
+
+                        <div class="admin-upload-preview" id="product-upload-preview"></div>
+
+                        @if (editor.ExistingImages.Count > 0)
+                        {
+                            <div class="admin-existing-images">
+                                <h5>Ảnh hiện có</h5>
+                                <div class="admin-existing-images__grid">
+                                    @foreach (var image in editor.ExistingImages.OrderBy(image => image.OrderIndex))
+                                    {
+                                        <div class="admin-existing-image-card">
+                                            <img src="@Url.Content(image.ImageUrl)" alt="@(image.Caption ?? editor.Name ?? "Product image")" />
+                                            <div>
+                                                <strong>@(image.IsPrimary ? "PrimaryImage" : $"ProductImage #{image.OrderIndex}")</strong>
+                                                <span>@image.ImageUrl</span>
+
+                                                @if (image.IsPrimary)
+                                                {
+                                                    <label class="admin-image-toggle">
+                                                        <input asp-for="Editor.RemovePrimaryImage" type="checkbox" />
+                                                        <span>Xóa ảnh chính hiện tại</span>
+                                                    </label>
+                                                }
+                                                else if (image.Id.HasValue)
+                                                {
+                                                    <label class="admin-image-toggle">
+                                                        <input type="checkbox" name="Editor.RemovedImageIds" value="@image.Id" />
+                                                        <span>Xóa ảnh này</span>
+                                                    </label>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="admin-form-actions admin-form-actions--product-editor">
+                        @if (!Model.IsCreateMode)
+                        {
+                            <a class="admin-products-modal-button admin-products-modal-button--secondary" asp-controller="Admin" asp-action="Products" asp-route-id="@editor.Id">Tải lại chi tiết</a>
+                        }
+                        <button class="admin-products-modal-button admin-products-modal-button--primary" type="submit">
+                            @(Model.IsCreateMode ? "Lưu sản phẩm mới" : "Cập nhật sản phẩm")
+                        </button>
+                    </div>
+                </form>
+
+                <div class="admin-products-side-grid">
+                    <div class="admin-inline-card">
+                        <h5>Lịch sử giá</h5>
+                        @if (editor.PriceHistories.Count == 0)
+                        {
+                            <p class="admin-muted">Chưa có lịch sử giá cho sản phẩm này.</p>
+                        }
+                        else
+                        {
+                            <div class="admin-price-history">
+                                @foreach (var history in editor.PriceHistories)
+                                {
+                                    <div class="admin-price-history__item">
+                                        <strong>@(history.PriceValue?.ToString("N0") ?? "N/A") @(string.IsNullOrWhiteSpace(history.PriceUnit) ? string.Empty : $"/ {history.PriceUnit}")</strong>
+                                        <span>Loại: @(history.PriceType ?? "N/A")</span>
+                                        <span>Ngày hiệu lực: @(history.EffectiveDate?.ToString("dd/MM/yyyy") ?? "N/A")</span>
+                                        <span>Ghi chú: @(string.IsNullOrWhiteSpace(history.Note) ? "-" : history.Note)</span>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </section>
+        </div>
+    }
+@if (Model.ShowCategoryManager)
+{
+    <div class="admin-products-modal" id="admin-category-modal" role="dialog" aria-modal="true" aria-labelledby="admin-category-modal-title">
+        <div class="admin-products-modal__backdrop">
+            <a class="admin-products-modal__close-hit" asp-controller="Admin" asp-action="Products" aria-label="Đóng popup quản lý loại"></a>
+        </div>
+        <section class="panel panel--products admin-products-panel admin-products-modal__dialog admin-category-modal__dialog">
+            <div class="panel__head admin-products-panel__head admin-products-modal-hero admin-products-modal-hero--violet">
+                <div>
+                    <p class="eyebrow">Quản lý loại sản phẩm</p>
+                    <h3 id="admin-category-modal-title">@(Model.IsCategoryCreateMode ? "Thêm loại sản phẩm mới" : $"Chỉnh sửa loại: {Model.CategoryEditor.Name}")</h3>
+                    <span>Tạo, cập nhật và sắp xếp nhóm sản phẩm trong một popup trực quan hơn.</span>
+                </div>
+                <div class="panel__head-actions">
+                    <a class="admin-products-modal-button admin-products-modal-button--ghost-light" asp-controller="Admin" asp-action="Products">Đóng</a>
+                </div>
+            </div>
+
+            <div class="admin-category-manager-grid">
+                <section class="admin-form-section">
+                    <div class="admin-form-section__head">
+                        <h4>Biểu mẫu loại sản phẩm</h4>
+                        <p>Tạo mới, cập nhật hoặc xóa loại sản phẩm riêng biệt mà không trộn vào form sản phẩm.</p>
+                    </div>
+
+                    <form asp-controller="Admin" asp-action="SaveProductCategory" method="post" class="admin-products-category-form">
+                        @Html.AntiForgeryToken()
+                        <input name="Id" value="@Model.CategoryEditor.Id" type="hidden" />
+
+                        <label class="admin-field">
+                            <span>Tên loại sản phẩm *</span>
+                            <input name="Name" value="@Model.CategoryEditor.Name" type="text" placeholder="Ví dụ: Phế liệu nhôm" />
+                        </label>
+
+                        <label class="admin-field">
+                            <span>Mô tả</span>
+                            <textarea name="Description" rows="4" placeholder="Mô tả ngắn gọn cho loại sản phẩm">@Model.CategoryEditor.Description</textarea>
+                        </label>
+
+                        <div class="admin-form-actions admin-form-actions--product-editor">
+                            <a class="admin-products-modal-button admin-products-modal-button--secondary"
+                               asp-controller="Admin"
+                               asp-action="Products"
+                               asp-route-manageCategories="true">Tạo form mới</a>
+                            <button class="admin-products-modal-button admin-products-modal-button--primary" type="submit">
+                                @(Model.IsCategoryCreateMode ? "Lưu loại sản phẩm" : "Cập nhật loại sản phẩm")
+                            </button>
+                        </div>
+                    </form>
+
+                    @if (!Model.IsCategoryCreateMode)
+                    {
+                        <form asp-controller="Admin"
+                              asp-action="DeleteCategory"
+                              asp-route-id="@Model.CategoryEditor.Id"
+                              method="post"
+                              class="admin-category-delete-form"
+                              onsubmit="return confirm('Xóa loại sản phẩm này?');">
+                            @Html.AntiForgeryToken()
+                            <button class="table-action table-action--delete" type="submit">Xóa loại</button>
+                        </form>
+                    }
+                </section>
+
+                <section class="admin-form-section admin-category-list-section">
+                    <div class="admin-form-section__head">
+                        <h4>Danh sách loại sản phẩm</h4>
+                        <p>Chọn một loại để chỉnh sửa nhanh hoặc kiểm tra số sản phẩm đang sử dụng.</p>
+                    </div>
+
+                    <div class="admin-category-list">
+                        @if (Model.Categories.Count == 0)
+                        {
+                            <p class="admin-muted">Chưa có loại sản phẩm nào.</p>
+                        }
+                        else
+                        {
+                            @foreach (var category in Model.Categories)
+                            {
+                                <div class="admin-category-item @(Model.CategoryEditor.Id == category.Id ? "is-selected" : string.Empty)">
+                                    <div>
+                                        <strong>@category.Name</strong>
+                                        <span>Slug: @category.Slug</span>
+                                        <span>@(string.IsNullOrWhiteSpace(category.Description) ? "Chưa có mô tả" : category.Description)</span>
+                                    </div>
+                                    <div class="admin-category-item__meta">
+                                        <span>@category.ProductCount sản phẩm</span>
+                                        <span>@(category.UpdatedAt?.ToString("dd/MM/yyyy HH:mm") ?? "Chưa cập nhật")</span>
+                                        <a class="table-action table-action--edit"
+                                           asp-controller="Admin"
+                                           asp-action="Products"
+                                           asp-route-manageCategories="true"
+                                           asp-route-categoryEditId="@category.Id"
+                                           asp-route-categoryId="@category.Id">Sửa loại</a>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </section>
+            </div>
+        </section>
+    </div>
+}
+</div>
+
+@section Styles {
+    <style>
+        .admin-products-layout {
+            display: block;
+        }
+
+        .admin-products-list-panel {
+            width: 100%;
+        }
+
+        .admin-products-panel {
+            display: grid;
+            gap: 18px;
+        }
+
+        .admin-products-editor-panel {
+            display: grid;
+            gap: 18px;
+        }
+
+        .admin-products-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 1200;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+        }
+
+        .admin-products-modal__backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.58);
+            backdrop-filter: blur(3px);
+        }
+
+        .admin-products-modal__close-hit {
+            position: absolute;
+            inset: 0;
+            display: block;
+        }
+
+        .admin-products-modal__dialog {
+            position: relative;
+            z-index: 1;
+            width: min(1180px, calc(100vw - 48px));
+            max-height: calc(100vh - 48px);
+            overflow: auto;
+            box-shadow: 0 24px 80px rgba(15, 23, 42, 0.35);
+        }
+
+        .admin-products-modal-hero {
+            margin: -24px -24px 0;
+            padding: 20px 24px;
+            border-radius: 24px 24px 20px 20px;
+            color: #fff;
+            box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.14);
+        }
+
+        .admin-products-modal-hero--emerald {
+            background: linear-gradient(135deg, #166534 0%, #16a34a 55%, #4ade80 100%);
+        }
+
+        .admin-products-modal-hero--violet {
+            background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 55%, #c084fc 100%);
+        }
+
+        .admin-products-modal-hero h3,
+        .admin-products-modal-hero .eyebrow,
+        .admin-products-modal-hero span {
+            color: inherit;
+        }
+
+        .admin-products-modal-hero h3 {
+            margin: 4px 0 6px;
+            font-size: 1.45rem;
+        }
+
+        .admin-products-modal-hero span {
+            display: block;
+            max-width: 640px;
+            font-size: 0.92rem;
+            line-height: 1.5;
+            opacity: 0.92;
+        }
+
+        .admin-products-panel__head {
+            align-items: flex-start;
+            gap: 16px;
+        }
+
+        .admin-products-summary,
+        .admin-products-actions,
+        .admin-form-actions,
+        .admin-products-side-grid,
+        .admin-products-top-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .admin-products-top-actions {
+            margin-left: auto;
+            justify-content: flex-end;
+            align-items: flex-end;
+        }
+
+        .admin-filter-toolbar {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 12px;
+            align-items: center;
+            margin-top: 8px;
+        }
+
+        .admin-filter-toolbar__search {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            min-height: 48px;
+            padding: 0.8rem 1rem;
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            border-radius: 16px;
+            background: #fff;
+            color: #0f172a;
+        }
+
+        .admin-filter-toolbar__search input {
+            flex: 1 1 auto;
+            border: 0;
+            outline: none;
+            background: transparent;
+            color: inherit;
+            font: inherit;
+        }
+
+        .admin-filter-toolbar__buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .admin-filter-toolbar__submit,
+        .admin-filter-toolbar__reset {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 48px;
+            padding: 0.8rem 1.25rem;
+            border-radius: 16px;
+            border: 0;
+            text-decoration: none;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .admin-filter-toolbar__submit {
+            color: #1d4ed8;
+            background: rgba(37, 99, 235, 0.12);
+        }
+
+        .admin-filter-toolbar__reset {
+            color: #475569;
+            background: rgba(148, 163, 184, 0.14);
+        }
+
+        .admin-toolbar-button {
+            min-width: 220px;
+            display: inline-flex;
+            align-items: center;
+            gap: 14px;
+            justify-content: flex-start;
+            padding: 14px 18px;
+            border-radius: 18px;
+            text-decoration: none;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+
+        .admin-toolbar-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
+        }
+
+        .admin-toolbar-button strong,
+        .admin-toolbar-button small {
+            display: block;
+        }
+
+        .admin-toolbar-button small {
+            color: #475569;
+            margin-top: 4px;
+        }
+
+        .admin-toolbar-button__icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            display: grid;
+            place-items: center;
+            font-size: 1.2rem;
+            font-weight: 800;
+            flex: 0 0 42px;
+        }
+
+        .admin-toolbar-button--primary {
+            color: #fff;
+            background: linear-gradient(135deg, #166534 0%, #16a34a 58%, #4ade80 100%);
+            border-color: transparent;
+        }
+
+        .admin-toolbar-button--primary .admin-toolbar-button__icon {
+            background: rgba(255, 255, 255, 0.18);
+            color: #fff;
+        }
+
+        .admin-category-delete-form {
+            margin-top: 12px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .admin-toolbar-button--ghost {
+            color: #0f172a;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        }
+
+        .admin-toolbar-button--ghost .admin-toolbar-button__icon {
+            background: #e0f2fe;
+            color: #0369a1;
+        }
+
+        .admin-products-modal-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            min-width: 140px;
+            padding: 12px 18px;
+            border: 0;
+            border-radius: 16px;
+            text-decoration: none;
+            font-weight: 700;
+            line-height: 1.2;
+            cursor: pointer;
+            box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+        }
+
+        .admin-products-modal-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 18px 36px rgba(15, 23, 42, 0.16);
+            filter: brightness(1.02);
+        }
+
+        .admin-products-modal-button--primary {
+            color: #fff;
+            background: linear-gradient(135deg, #166534 0%, #16a34a 58%, #4ade80 100%);
+        }
+
+        .admin-products-modal-button--ghost {
+            color: #475569;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            border: 1px solid rgba(148, 163, 184, 0.28);
+        }
+
+        .admin-products-modal-button--ghost-light {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.16);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: none;
+        }
+
+        .admin-products-modal-button--secondary {
+            color: #1e293b;
+            background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 55%, #ede9fe 100%);
+            border: 1px solid rgba(129, 140, 248, 0.18);
+        }
+
+        .admin-form-actions--product-editor {
+            justify-content: flex-end;
+            align-items: center;
+        }
+
+        .admin-products-summary__item,
+        .admin-products-alert,
+        .admin-products-price-label,
+        .admin-muted {
+            font-size: 0.84rem;
+        }
+
+        .admin-products-pagination {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            margin-top: 18px;
+            padding: 18px 20px;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            border-radius: 20px;
+            background: linear-gradient(135deg, #f8fbff 0%, #eff6ff 48%, #f8fafc 100%);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+        }
+
+        .admin-products-pagination__summary {
+            display: grid;
+            gap: 4px;
+            min-width: 220px;
+        }
+
+        .admin-products-pagination__eyebrow {
+            font-size: 0.75rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #2563eb;
+        }
+
+        .admin-products-pagination__summary strong {
+            font-size: 1rem;
+            color: #0f172a;
+        }
+
+        .admin-products-pagination__summary span {
+            color: #475569;
+            line-height: 1.45;
+        }
+
+        .admin-products-pagination__actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .admin-products-pagination__button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-width: 44px;
+            padding: 10px 14px;
+            border-radius: 14px;
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            background: rgba(255, 255, 255, 0.92);
+            color: #1e293b;
+            text-decoration: none;
+            font-weight: 700;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .admin-products-pagination__button:hover {
+            transform: translateY(-1px);
+            border-color: rgba(37, 99, 235, 0.35);
+            box-shadow: 0 14px 28px rgba(37, 99, 235, 0.12);
+        }
+
+        .admin-products-pagination__button.is-active {
+            border-color: transparent;
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 55%, #60a5fa 100%);
+            color: #fff;
+            box-shadow: 0 16px 32px rgba(37, 99, 235, 0.26);
+        }
+
+        .admin-products-pagination__button.is-disabled {
+            opacity: 0.45;
+            pointer-events: none;
+            box-shadow: none;
+        }
+
+        .admin-products-pagination__button-icon {
+            font-size: 0.95rem;
+            line-height: 1;
+        }
+
+        .admin-products-summary__item,
+        .admin-products-price-label,
+        .admin-products-alert,
+        .admin-inline-card,
+        .admin-price-history__item,
+        .admin-existing-image-card,
+        .admin-upload-preview__item {
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            background: #f8fafc;
+            border-radius: 16px;
+        }
+
+        .admin-products-summary__item,
+        .admin-products-price-label {
+            padding: 0.45rem 0.8rem;
+        }
+
+        .admin-products-alert {
+            padding: 14px 18px;
+            margin: 0 0 18px;
+        }
+
+        .admin-products-alert--success {
+            background: #ecfdf5;
+            color: #047857;
+            border-color: rgba(16, 185, 129, 0.25);
+        }
+
+        .admin-products-alert--error {
+            background: #fef2f2;
+            color: #b91c1c;
+            border-color: rgba(239, 68, 68, 0.25);
+        }
+
+        .admin-products-empty {
+            display: grid;
+            gap: 10px;
+            padding: 12px 0;
+        }
+
+        .admin-product-item {
+            display: grid;
+            grid-template-columns: 58px minmax(0, 1fr);
+            gap: 12px;
+            align-items: center;
+        }
+
+        .admin-product-item__thumb {
+            width: 58px;
+            height: 58px;
+            border-radius: 14px;
+            overflow: hidden;
+            background: #e2e8f0;
+            display: grid;
+            place-items: center;
+            color: #64748b;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .admin-product-item__thumb img,
+        .admin-existing-image-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .admin-products-table tr.is-selected {
+            background: rgba(37, 99, 235, 0.06);
+        }
+
+        .admin-products-form,
+        .admin-form-section,
+        .admin-existing-images,
+        .admin-price-history,
+        .admin-products-category-form {
+            display: grid;
+            gap: 16px;
+        }
+
+        .admin-form-section {
+            padding: 18px;
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            border-radius: 18px;
+            background: #fff;
+        }
+
+        .admin-inline-card--hint {
+            align-content: start;
+            background: linear-gradient(180deg, #f8fbff 0%, #eff6ff 100%);
+        }
+
+        .admin-category-manager-grid {
+            display: grid;
+            grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
+            gap: 18px;
+            align-items: start;
+        }
+
+        .admin-category-manager-grid > .admin-form-section {
+            align-self: start;
+        }
+
+        .admin-category-modal__dialog {
+            width: min(1120px, calc(100vw - 48px));
+        }
+
+        .admin-category-list,
+        .admin-category-list-section {
+            display: grid;
+            gap: 14px;
+        }
+
+        .admin-category-item {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 14px;
+            padding: 16px;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            border-radius: 16px;
+            background: #f8fafc;
+            align-items: start;
+        }
+
+        .admin-category-item.is-selected {
+            border-color: rgba(14, 165, 233, 0.45);
+            background: #eff6ff;
+            box-shadow: inset 0 0 0 1px rgba(14, 165, 233, 0.12);
+        }
+
+        .admin-category-item strong,
+        .admin-category-item span {
+            display: block;
+        }
+
+        .admin-category-item span {
+            color: #64748b;
+            font-size: 0.84rem;
+            line-height: 1.5;
+            margin-top: 4px;
+        }
+
+        .admin-category-item__meta {
+            display: grid;
+            gap: 8px;
+            justify-items: end;
+            text-align: right;
+        }
+
+        .admin-products-category-form {
+            align-content: start;
+        }
+
+        .admin-form-section__head h4,
+        .admin-inline-card h5,
+        .admin-existing-images h5 {
+            margin: 0 0 6px;
+        }
+
+        .admin-form-section__head p,
+        .admin-inline-card p,
+        .admin-muted {
+            margin: 0;
+            color: #64748b;
+            line-height: 1.5;
+        }
+
+        .admin-form-grid {
+            display: grid;
+            gap: 14px;
+        }
+
+        .admin-form-grid--2 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .admin-form-grid--3 {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .admin-field {
+            display: grid;
+            gap: 8px;
+        }
+
+        .admin-field > span {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .admin-field input[type="text"],
+        .admin-field input[type="number"],
+        .admin-field select,
+        .admin-field textarea {
+            width: 100%;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 0.82rem 0.95rem;
+            font: inherit;
+            color: #0f172a;
+            background: #fff;
+        }
+
+        .admin-field textarea {
+            resize: vertical;
+        }
+
+        .admin-field--full {
+            grid-column: 1 / -1;
+        }
+
+        .admin-field--checkbox {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-top: 30px;
+        }
+
+        .admin-field--checkbox input {
+            width: 18px;
+            height: 18px;
+        }
+
+        .admin-inline-card,
+        .admin-existing-image-card,
+        .admin-price-history__item,
+        .admin-upload-preview__item {
+            padding: 14px;
+        }
+
+        .admin-upload-dropzone {
+            display: grid;
+            gap: 6px;
+            justify-items: center;
+            text-align: center;
+            padding: 28px 20px;
+            border: 2px dashed #93c5fd;
+            border-radius: 18px;
+            background: linear-gradient(180deg, #f8fbff 0%, #eef6ff 100%);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .admin-upload-dropzone:hover,
+        .admin-upload-dropzone.is-dragover {
+            border-color: #2563eb;
+            background: #eff6ff;
+        }
+
+        .admin-upload-dropzone input {
+            display: none;
+        }
+
+        .admin-upload-dropzone__title {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .admin-upload-dropzone__hint {
+            max-width: 560px;
+            color: #64748b;
+            line-height: 1.6;
+        }
+
+        .admin-upload-preview,
+        .admin-existing-images__grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 12px;
+        }
+
+        .admin-upload-preview__item,
+        .admin-existing-image-card {
+            display: grid;
+            gap: 10px;
+        }
+
+        .admin-image-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            font-size: 0.84rem;
+            color: #b91c1c;
+            font-weight: 600;
+        }
+
+        .admin-image-toggle input {
+            width: 16px;
+            height: 16px;
+        }
+
+        .admin-existing-image-card img {
+            aspect-ratio: 1 / 1;
+            border-radius: 12px;
+        }
+
+        .admin-price-history__item span,
+        .admin-existing-image-card span,
+        .admin-upload-preview__item span {
+            display: block;
+            color: #64748b;
+            font-size: 0.82rem;
+            line-height: 1.5;
+            word-break: break-word;
+        }
+
+        @@media (max-width: 1200px) {
+            .admin-products-modal {
+                padding: 16px;
+            }
+
+            .admin-products-modal__dialog {
+                width: min(100%, calc(100vw - 32px));
+                max-height: calc(100vh - 32px);
+            }
+        }
+
+        @@media (max-width: 900px) {
+            .admin-form-grid--2,
+            .admin-form-grid--3,
+            .admin-category-manager-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .admin-products-actions,
+            .admin-form-actions,
+            .topbar__actions,
+            .admin-products-top-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .admin-products-modal-button {
+                width: 100%;
+            }
+
+            .admin-toolbar-button {
+                min-width: 100%;
+            }
+
+            .admin-category-item {
+                grid-template-columns: 1fr;
+            }
+
+            .admin-category-item__meta {
+                justify-items: start;
+                text-align: left;
+            }
+
+            .admin-products-modal {
+                padding: 10px;
+            }
+
+            .admin-products-modal__dialog {
+                width: 100%;
+                max-height: calc(100vh - 20px);
+                border-radius: 20px;
+            }
+        }
+    </style>
+}
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/tinymce@7/tinymce.min.js" referrerpolicy="origin"></script>
+    <script>
+        (() => {
+            const dropzone = document.getElementById('product-upload-dropzone');
+            const input = document.getElementById('product-upload-input');
+            const preview = document.getElementById('product-upload-preview');
+            const productDescriptionTextarea = document.querySelector('[data-product-rich-editor]');
+            const productRichEditorShell = document.querySelector('[data-product-rich-editor-shell]');
+            const productRichEditorStatus = document.querySelector('[data-product-rich-editor-status]');
+
+            if (!dropzone || !input || !preview) {
+                return;
+            }
+
+            const renderFiles = (files) => {
+                preview.innerHTML = '';
+
+                Array.from(files).forEach((file, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'admin-upload-preview__item';
+                    item.innerHTML = `
+                        <strong>${index + 1}. ${file.name}</strong>
+                        <span>${Math.round(file.size / 1024)} KB</span>
+                    `;
+                    preview.appendChild(item);
+                });
+            };
+
+            const validateProductFiles = (files) => {
+                const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+                const maxEach = 5 * 1024 * 1024;
+                const maxTotal = 20 * 1024 * 1024;
+                const maxCount = 10;
+
+                const selected = Array.from(files || []);
+                if (selected.length > maxCount) {
+                    alert('Tối đa 10 ảnh cho mỗi lần chọn.');
+                    return false;
+                }
+
+                const total = selected.reduce((sum, file) => sum + (file.size || 0), 0);
+                if (total > maxTotal) {
+                    alert('Tổng dung lượng ảnh không được vượt quá 20MB.');
+                    return false;
+                }
+
+                for (const file of selected) {
+                    if (!allowedTypes.has(file.type)) {
+                        alert(`File ${file.name} không đúng định dạng JPG/PNG/WEBP.`);
+                        return false;
+                    }
+
+                    if ((file.size || 0) > maxEach) {
+                        alert(`File ${file.name} vượt quá 5MB.`);
+                        return false;
+                    }
+                }
+
+                return true;
+            };
+
+            input.addEventListener('change', () => {
+                if (!validateProductFiles(input.files)) {
+                    input.value = '';
+                    preview.innerHTML = '';
+                    return;
+                }
+
+                renderFiles(input.files);
+            });
+
+            ['dragenter', 'dragover'].forEach((eventName) => {
+                dropzone.addEventListener(eventName, (event) => {
+                    event.preventDefault();
+                    dropzone.classList.add('is-dragover');
+                });
+            });
+
+            ['dragleave', 'drop'].forEach((eventName) => {
+                dropzone.addEventListener(eventName, (event) => {
+                    event.preventDefault();
+                    dropzone.classList.remove('is-dragover');
+                });
+            });
+
+            dropzone.addEventListener('drop', (event) => {
+                const files = event.dataTransfer?.files;
+                if (!files || files.length === 0) {
+                    return;
+                }
+
+                if (!validateProductFiles(files)) {
+                    return;
+                }
+
+                input.files = files;
+                renderFiles(files);
+            });
+
+            const showProductEditorStatus = (message, tone) => {
+                if (!productRichEditorShell || !productRichEditorStatus) {
+                    return;
+                }
+
+                productRichEditorStatus.textContent = message;
+                productRichEditorShell.classList.remove('is-loading', 'is-ready', 'has-error');
+
+                if (tone === 'ready') {
+                    productRichEditorShell.classList.add('is-ready');
+                } else if (tone === 'error') {
+                    productRichEditorShell.classList.add('has-error');
+                }
+            };
+
+            const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(new Error('Không thể đọc file ảnh.'));
+                reader.readAsDataURL(file);
+            });
+
+            const loadImageFromBlob = (blob) => new Promise((resolve, reject) => {
+                const objectUrl = URL.createObjectURL(blob);
+                const image = new Image();
+
+                image.onload = () => {
+                    URL.revokeObjectURL(objectUrl);
+                    resolve(image);
+                };
+
+                image.onerror = () => {
+                    URL.revokeObjectURL(objectUrl);
+                    reject(new Error('Không thể đọc kích thước ảnh.'));
+                };
+
+                image.src = objectUrl;
+            });
+
+            const canvasToBlob = (canvas, mimeType, quality) => new Promise((resolve, reject) => {
+                canvas.toBlob((blob) => {
+                    if (!blob) {
+                        reject(new Error('Không thể nén ảnh.'));
+                        return;
+                    }
+
+                    resolve(blob);
+                }, mimeType, quality);
+            });
+
+            const optimizeInlineImage = async (fileOrBlob) => {
+                const maxWidth = 1600;
+                const maxHeight = 1600;
+                const targetBytes = 200 * 1024;
+                const minBytes = 100 * 1024;
+                const sourceBlob = fileOrBlob;
+
+                if (!sourceBlob || !sourceBlob.type || !sourceBlob.type.startsWith('image/')) {
+                    return fileOrBlob;
+                }
+
+                const image = await loadImageFromBlob(sourceBlob);
+                const width = image.naturalWidth || image.width;
+                const height = image.naturalHeight || image.height;
+                const ratio = Math.min(maxWidth / width, maxHeight / height, 1);
+                const targetWidth = Math.max(1, Math.round(width * ratio));
+                const targetHeight = Math.max(1, Math.round(height * ratio));
+
+                const canvas = document.createElement('canvas');
+                canvas.width = targetWidth;
+                canvas.height = targetHeight;
+
+                const context = canvas.getContext('2d', { alpha: false });
+                context.drawImage(image, 0, 0, targetWidth, targetHeight);
+
+                const supportsWebp = !!document.createElement('canvas').toDataURL('image/webp').match('data:image/webp');
+                const outputType = supportsWebp ? 'image/webp' : 'image/jpeg';
+                const qualityCandidates = [0.82, 0.76, 0.7, 0.64, 0.58];
+
+                let bestBlob = null;
+
+                for (let i = 0; i < qualityCandidates.length; i++) {
+                    const candidate = await canvasToBlob(canvas, outputType, qualityCandidates[i]);
+                    bestBlob = candidate;
+
+                    if (candidate.size <= targetBytes) {
+                        if (candidate.size < minBytes && i > 0) {
+                            continue;
+                        }
+
+                        break;
+                    }
+                }
+
+                if (!bestBlob || bestBlob.size >= sourceBlob.size) {
+                    return sourceBlob;
+                }
+
+                return bestBlob;
+            };
+
+            const pickInlineImage = (callback) => {
+                const picker = document.createElement('input');
+                picker.type = 'file';
+                picker.accept = 'image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp';
+
+                picker.addEventListener('change', () => {
+                    const file = picker.files && picker.files[0] ? picker.files[0] : null;
+                    if (!file) {
+                        return;
+                    }
+
+                    showProductEditorStatus('Đang tối ưu ảnh trước khi chèn...', 'ready');
+
+                    optimizeInlineImage(file)
+                        .then((optimizedBlob) => readFileAsDataUrl(optimizedBlob))
+                        .then((dataUrl) => {
+                            callback(dataUrl, file);
+                            showProductEditorStatus('Ảnh đã được tối ưu và chèn vào mô tả.', 'ready');
+                        })
+                        .catch(() => {
+                            showProductEditorStatus('Không thể chèn ảnh vừa chọn. Vui lòng thử lại.', 'error');
+                        });
+                });
+
+                picker.click();
+            };
+
+            const initializeProductRichEditor = () => {
+                if (!productDescriptionTextarea) {
+                    return;
+                }
+
+                if (typeof tinymce === 'undefined') {
+                    showProductEditorStatus('Không tải được trình soạn thảo trực quan. Hệ thống đang dùng ô nhập mặc định.', 'error');
+                    return;
+                }
+
+                tinymce.init({
+                    target: productDescriptionTextarea,
+                    promotion: false,
+                    branding: false,
+                    menubar: 'file edit view insert format tools table help',
+                    plugins: 'autolink autoresize charmap code fullscreen image link lists table wordcount',
+                    toolbar: 'undo redo | blocks | bold italic underline | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image | removeformat code fullscreen',
+                    toolbar_sticky: true,
+                    min_height: 360,
+                    autoresize_bottom_margin: 20,
+                    block_formats: 'Đoạn văn=p; Tiêu đề 1=h1; Tiêu đề 2=h2; Tiêu đề 3=h3',
+                    contextmenu: 'undo redo | bold italic | link image table',
+                    paste_data_images: false,
+                    automatic_uploads: true,
+                    image_title: true,
+                    image_caption: true,
+                    images_file_types: 'jpg,jpeg,png,webp',
+                    file_picker_types: 'image',
+                    file_picker_callback: function (callback, value, meta) {
+                        if (!meta || meta.filetype !== 'image') {
+                            return;
+                        }
+
+                        pickInlineImage(function (dataUrl, file) {
+                            callback(dataUrl, { alt: file.name });
+                        });
+                    },
+                    images_upload_handler: function (blobInfo, progress) {
+                        return new Promise(function (resolve, reject) {
+                            optimizeInlineImage(blobInfo.blob())
+                                .then(function (optimizedBlob) {
+                                    const formData = new FormData();
+                                    const extension = optimizedBlob.type === 'image/png'
+                                        ? '.png'
+                                        : optimizedBlob.type === 'image/webp'
+                                            ? '.webp'
+                                            : '.jpg';
+                                    const fileName = `product-inline-${Date.now()}${extension}`;
+                                    formData.append('file', optimizedBlob, fileName);
+
+                                    return fetch('/admin/products/upload-inline-image', {
+                                        method: 'POST',
+                                        body: formData,
+                                        headers: {
+                                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                                        }
+                                    });
+                                })
+                                .then(function (response) {
+                                    if (!response.ok) {
+                                        throw new Error('Upload ảnh thất bại.');
+                                    }
+
+                                    return response.json();
+                                })
+                                .then(function (json) {
+                                    if (!json || !json.success || !json.url) {
+                                        throw new Error(json?.message || 'Không nhận được URL ảnh hợp lệ.');
+                                    }
+
+                                    showProductEditorStatus('Ảnh đã được upload lên server và chèn bằng URL.', 'ready');
+                                    if (typeof progress === 'function') {
+                                        progress(100);
+                                    }
+
+                                    resolve(json.url);
+                                })
+                                .catch(function (error) {
+                                    reject(error?.message || 'Không thể xử lý ảnh để chèn vào mô tả sản phẩm.');
+                                });
+                        });
+                    },
+                    content_style: 'body { font-family: "Plus Jakarta Sans", Arial, sans-serif; font-size: 16px; line-height: 1.8; color: #1f2937; padding: 18px 22px; } img { max-width: 100%; height: auto; } figure { margin: 1.6rem 0; }',
+                    setup: function (editor) {
+                        editor.on('init', function () {
+                            showProductEditorStatus('Trình soạn thảo đã sẵn sàng. Bạn có thể viết mô tả như Word.', 'ready');
+                        });
+
+                        editor.on('change input undo redo SetContent', function () {
+                            editor.save();
+                        });
+                    }
+                });
+            };
+
+            initializeProductRichEditor();
+        })();
+    </script>
+}

@@ -1,0 +1,1235 @@
+@model WebThuMuaPheLieu.Models.BlogIndexViewModel
+@inject WebThuMuaPheLieu.Services.IStructuredDataService StructuredDataService
+
+@{
+    Layout = "_HomeLayout";
+    ViewData["Title"] = "Tin tức";
+    ViewData["NeedsAos"] = true;
+    ViewData["Description"] = "Cập nhật tin tức thị trường phế liệu, kinh nghiệm phân loại và mẹo bán phế liệu giá cao từ Phế Liệu Thành Trung.";
+    if (string.IsNullOrWhiteSpace(ViewData["Canonical"]?.ToString()))
+    {
+        ViewData["Canonical"] = $"{Context.Request.Scheme}://{Context.Request.Host}{Context.Request.Path}";
+    }
+    ViewData["OgType"] = "website";
+    ViewData["BodyClass"] = "blog-page";
+    var structuredDataJson = StructuredDataService.SerializeSchemas(StructuredDataService.BuildBlogListSchemas(Context));
+}
+
+@section Styles {
+    <style>
+        body.blog-page #blog-list>[class*="col-"] {
+            display: flex;
+        }
+
+        body.blog-page #blog-list .post-card {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        body.blog-page #blog-list .post-visual,
+        body.blog-page #blog-list .materials-card-media {
+            padding: 0;
+            aspect-ratio: 4 / 3;
+            min-height: 260px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        body.blog-page #blog-list .materials-phone-overlay {
+            position: absolute;
+            right: 30px;
+            bottom: 12px;
+            z-index: 2;
+            color: #ffd54a;
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+            pointer-events: none;
+        }
+
+        body.blog-page #blog-list .post-visual img,
+        body.blog-page #blog-list .materials-card-media img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        body.blog-page #blog-list .post-body {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+        }
+
+        body.blog-page #blog-list .post-excerpt {
+            flex: 1;
+        }
+
+        body.blog-page #blog-list .post-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        body.blog-page #blog-list .post-useful-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid #bbf7d0;
+            border-radius: 999px;
+            background: #f0fdf4;
+            color: #166534;
+            padding: 10px 16px;
+            font-weight: 700;
+            transition: all 0.2s ease;
+        }
+
+        body.blog-page #blog-list .post-useful-btn:hover {
+            background: #dcfce7;
+            border-color: #86efac;
+        }
+
+        body.blog-page #blog-list .post-useful-btn:disabled,
+        body.blog-page #blog-list .post-useful-btn.is-cooldown {
+            opacity: 0.75;
+            cursor: not-allowed;
+            background: #dcfce7;
+            border-color: #86efac;
+        }
+
+        body.blog-page #blog-list .post-like-count {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #15803d;
+            font-weight: 700;
+        }
+
+        body.blog-page #blog-list .post-useful-feedback {
+            min-height: 22px;
+            margin: 10px 0 0;
+            color: #166534;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        body.blog-page #blog-list .post-useful-feedback.is-error {
+            color: #b91c1c;
+        }
+
+        body.blog-page #blog-list .post-link {
+            margin-top: 14px;
+        }
+
+        body.blog-page .category-list .active>a,
+        body.blog-page .category-list a.active {
+            color: #15803d;
+            font-weight: 700;
+        }
+
+        body.blog-page .category-list .active span {
+            background-color: #15803d;
+            color: #fff;
+        }
+
+        body.blog-page .blog-sidebar-wrap .mini-post {
+            align-items: flex-start;
+        }
+
+        body.blog-page .blog-sidebar-wrap .mini-thumb {
+            width: 86px;
+            height: 72px;
+            flex: 0 0 86px;
+            overflow: hidden;
+            border-radius: 16px;
+            background: #eef3ea;
+        }
+
+        body.blog-page .blog-sidebar-wrap .mini-thumb img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        body.blog-page .blog-mobile-search-btn,
+        body.blog-page .blog-mobile-search-popup,
+        body.blog-page .blog-mobile-search-backdrop,
+        body.blog-page .blog-mobile-search-head {
+            display: none;
+        }
+
+        /* Fallback: tránh tình trạng khối có data-aos bị ẩn nếu JS animation lỗi/chưa init */
+        body.blog-page [data-aos] {
+            opacity: 1 !important;
+            transform: none !important;
+        }
+
+        @@media (max-width: 767.98px) {
+            body.blog-page.blog-mobile-search-open {
+                overflow: hidden;
+            }
+
+            body.blog-page #blog-list>[class*="col-"] {
+                flex: 0 0 100%;
+                max-width: 100%;
+            }
+
+            body.blog-page #blog-list {
+                row-gap: 14px !important;
+            }
+
+            body.blog-page #blog-list .post-visual,
+            body.blog-page #blog-list .materials-card-media {
+                aspect-ratio: 16 / 9;
+                min-height: 180px;
+            }
+
+            body.blog-page #blog-list .post-card {
+                border-radius: 18px;
+                overflow: hidden;
+                box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08);
+            }
+
+            body.blog-page #blog-list .post-body {
+                padding: 14px 14px 16px;
+            }
+
+            body.blog-page #blog-list .post-meta {
+                gap: 6px;
+                margin-bottom: 8px;
+                font-size: 0.76rem;
+                line-height: 1.35;
+            }
+
+            body.blog-page #blog-list .post-meta span {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+            }
+
+            body.blog-page #blog-list h3 {
+                margin-bottom: 8px;
+                font-size: 1rem;
+                line-height: 1.4;
+            }
+
+            body.blog-page #blog-list .post-excerpt {
+                margin-bottom: 10px;
+                font-size: 0.88rem;
+                line-height: 1.55;
+                display: -webkit-box;
+                -webkit-line-clamp: 3;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+
+            body.blog-page #blog-list .post-actions {
+                align-items: stretch;
+                flex-direction: column;
+                gap: 8px;
+                margin-top: 4px;
+            }
+
+            body.blog-page #blog-list .post-useful-btn,
+            body.blog-page #blog-list .post-like-count {
+                width: 100%;
+                justify-content: center;
+                min-height: 42px;
+                font-size: 0.88rem;
+            }
+
+            body.blog-page #blog-list .post-link {
+                margin-top: 10px;
+                font-size: 0.88rem;
+            }
+
+            body.blog-page .blog-mobile-search-btn {
+                position: fixed;
+                right: 12px;
+                bottom: 350px;
+                z-index: 10002;
+                width: 52px;
+                height: 52px;
+                border: 0;
+                border-radius: 50%;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                background: linear-gradient(135deg, #15803d, #166534);
+                color: #fff;
+                box-shadow: 0 16px 34px rgba(21, 128, 61, 0.28);
+            }
+
+            body.blog-page .blog-mobile-search-btn i {
+                font-size: 1rem;
+                line-height: 1;
+            }
+
+            body.blog-page .blog-mobile-search-backdrop {
+                position: fixed;
+                inset: 0;
+                z-index: 10010;
+                display: block;
+                background: rgba(15, 23, 42, 0.52);
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.25s ease;
+            }
+
+            body.blog-page .blog-mobile-search-popup {
+                position: fixed;
+                left: 12px;
+                right: 12px;
+                top: 50%;
+                z-index: 10011;
+                display: block;
+                padding: 18px 16px 16px;
+                border-radius: 22px;
+                background: #fff;
+                box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+                transform: translateY(calc(-50% + 24px)) scale(0.96);
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.25s ease, transform 0.25s ease;
+            }
+
+            body.blog-page .blog-mobile-search-popup.is-open,
+            body.blog-page .blog-mobile-search-backdrop.is-open {
+                opacity: 1;
+                pointer-events: auto;
+            }
+
+            body.blog-page .blog-mobile-search-popup.is-open {
+                transform: translateY(-50%) scale(1);
+            }
+
+            body.blog-page .blog-mobile-search-head {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                margin-bottom: 12px;
+            }
+
+            body.blog-page .blog-mobile-search-head h3 {
+                margin: 0;
+                font-size: 1rem;
+                font-weight: 800;
+                color: #0f172a;
+            }
+
+            body.blog-page .blog-mobile-search-close {
+                width: 38px;
+                height: 38px;
+                border: 0;
+                border-radius: 50%;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                background: #f1f5f9;
+                color: #0f172a;
+            }
+
+            body.blog-page .blog-mobile-search-popup .search-box {
+                margin-bottom: 14px;
+            }
+
+            body.blog-page .blog-mobile-search-popup .tag-cloud {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            body.blog-page .blog-mobile-search-popup .tag {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 36px;
+                padding: 8px 12px;
+                border-radius: 999px;
+            }
+
+            body.blog-page .blog-sidebar-wrap .sidebar-card:first-child,
+            body.blog-page .blog-sidebar-wrap .sidebar-card:last-child {
+                display: none;
+            }
+        }
+
+        @@media (min-width: 768px) {
+            body.blog-page .blog-mobile-search-btn,
+            body.blog-page .blog-mobile-search-popup,
+            body.blog-page .blog-mobile-search-backdrop {
+                display: none !important;
+            }
+        }
+    </style>
+}
+
+@section Head {
+    <link rel="preload" as="image" href="@(Model.Posts.FirstOrDefault()?.CoverImage ?? "/assets/img/blog/blog-1.jpg")" fetchpriority="high" />
+    <partial name="_StructuredData" model="structuredDataJson" />
+}
+
+<main id="main" class="blog-page-main">
+    <h1 class="visually-hidden">Tin tức thu mua phế liệu mới nhất</h1>
+    <button type="button" class="blog-mobile-search-btn" id="blogMobileSearchBtn" aria-label="Mở tìm kiếm nhanh tin tức">
+        <i class="bi bi-search"></i>
+    </button>
+    <div class="blog-mobile-search-backdrop" id="blogMobileSearchBackdrop"></div>
+    <div class="blog-mobile-search-popup" id="blogMobileSearchPopup" aria-label="Tìm kiếm nhanh tin tức">
+        <div class="blog-mobile-search-head">
+            <h3>Tìm kiếm nhanh</h3>
+            <button type="button" class="blog-mobile-search-close" id="blogMobileSearchCloseBtn" aria-label="Đóng tìm kiếm nhanh">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <form method="get" class="search-box" id="blogMobileSearchForm">
+            <input type="hidden" name="categoryName" value="@Model.SelectedCategorySlug">
+            <input type="text" name="searchTerm" value="@Model.SearchTerm" placeholder="Nhập từ khóa...">
+            <button type="submit"><i class="bi bi-search"></i></button>
+        </form>
+        <div>
+            <h4>Từ khóa phổ biến</h4>
+            <div class="tag-cloud">
+                <a href="#" class="tag js-mobile-popular-tag" data-keyword="giá phế liệu">giá phế liệu</a>
+                <a href="#" class="tag js-mobile-popular-tag" data-keyword="đồng đỏ">đồng đỏ</a>
+                <a href="#" class="tag js-mobile-popular-tag" data-keyword="sắt thép">sắt thép</a>
+                <a href="#" class="tag js-mobile-popular-tag" data-keyword="thanh lý kho">thanh lý kho</a>
+                <a href="#" class="tag js-mobile-popular-tag" data-keyword="máy móc cũ">máy móc cũ</a>
+                <a href="#" class="tag js-mobile-popular-tag" data-keyword="giấy carton">giấy carton</a>
+                <a href="#" class="tag js-mobile-popular-tag" data-keyword="nhựa công nghiệp">nhựa công nghiệp</a>
+                <a href="#" class="tag js-mobile-popular-tag" data-keyword="inox">inox</a>
+            </div>
+        </div>
+    </div>
+    <section id="blog-posts" class="blog-layout home-card-section">
+        <div class="container-fluid home-section-shell" data-aos="fade-up">
+            <div class="section-header blog-section-header">
+            </div>
+            <div class="row gy-5">
+                <div class="col-lg-8">
+                    @if (Model.Posts.Any())
+                    {
+                        <div id="blog-list" class="row gy-4" data-search-term="@Model.SearchTerm"
+                             data-category-name="@Model.SelectedCategorySlug"
+                             data-initial-cursor="@(Model.InitialCursor ?? string.Empty)"
+                             data-has-more="@(Model.HasMore ? "true" : "false")">
+                            @for (var index = 0; index < Model.Posts.Count; index++)
+                            {
+                                var post = Model.Posts[index];
+                                var animationDelay = 100 + (index % 6) * 50;
+
+                                <div class="col-12 col-md-6" data-aos="fade-up" data-aos-delay="@animationDelay">
+                                    <article class="post-card h-100 js-post-card"
+                                             data-detail-url="@Url.RouteUrl("blog-detail-seo", new { slug = post.Slug })">
+                                        <div class="post-visual materials-card-media">
+                                            <img src="@post.CoverImage" alt="@post.Title" class="img-fluid w-100 h-100 materials-hover-image js-blog-card-image"
+                                                 data-image-sequence="@string.Join("|", post.ImageSequence)"
+                                                 data-default-image="@post.CoverImage"
+                                                 loading="@(index == 0 ? "eager" : "lazy")"
+                                                 fetchpriority="@(index == 0 ? "high" : "auto")"
+                                                 decoding="async"
+                                                 width="640"
+                                                 height="480"
+                                                 style="object-fit: cover;">
+                                            <span class="materials-phone-overlay">@Model.ContactPhone</span>
+                                        </div>
+                                        <div class="post-body">
+                                            <div class="post-meta">
+                                                <span><i class="bi bi-calendar-event"></i>
+                                                    @(post.PublishedAt?.ToString("dd/MM/yyyy") ?? "Đang cập nhật")</span>
+                                                    <span><i class="bi bi-folder2-open"></i> @post.CategoryName</span>
+                                                    <span><i class="bi bi-person"></i> Tác giả: @(string.IsNullOrWhiteSpace(post.AuthorName) ? "Lê Thị Hồng" : post.AuthorName)</span>
+                                                </div>
+                                                <h3>@post.Title</h3>
+                                                <p class="post-excerpt">@post.Summary</p>
+                                                <div class="post-actions">
+                                                    <button type="button" class="post-useful-btn js-post-useful-btn"
+                                                            data-post-id="@post.Id" data-default-label="Hữu ích">
+                                                        <i class="bi bi-hand-thumbs-up"></i>
+                                                        <span class="js-post-useful-btn-label">Hữu ích</span>
+                                                    </button>
+                                                    <span class="post-like-count">
+                                                        <i class="bi bi-heart-fill"></i>
+                                                        <span class="js-post-like-count">@post.LikeCount</span> lượt hữu ích
+                                                    </span>
+                                                </div>
+                                                <p class="post-useful-feedback js-post-useful-feedback" aria-live="polite"></p>
+
+                                                <a asp-route="blog-detail-seo" asp-route-slug="@post.Slug"
+                                                   class="post-link"><i class="bi bi-arrow-right-circle-fill"></i> Xem chi tiết</a>
+                                            </div>
+                                        </article>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    else
+                        {
+                            <div id="blog-list" class="row gy-4" data-search-term="@Model.SearchTerm"
+                                 data-category-name="@Model.SelectedCategorySlug">
+                                <div class="col-12 text-center py-4">
+                                    <p class="text-muted mb-0">
+                                        @if (!string.IsNullOrWhiteSpace(Model.SearchTerm)
+                                            && !string.IsNullOrWhiteSpace(Model.SelectedCategoryName))
+                                        {
+                                            @:Không tìm thấy bài viết nào phù hợp với từ khóa "@Model.SearchTerm" trong chuyên mục "@Model.SelectedCategoryName".
+                                        }
+                                        else if (!string.IsNullOrWhiteSpace(Model.SearchTerm))
+                                            {
+                                                @:Không tìm thấy bài viết nào phù hợp với từ khóa "@Model.SearchTerm".
+                                            }
+                                            else if (!string.IsNullOrWhiteSpace(Model.SelectedCategoryName))
+                                            {
+                                                @:Chưa có bài viết nào trong chuyên mục "@Model.SelectedCategoryName".
+                                            }
+                                            else
+                                            {
+                                                @:Đang cập nhật bài viết mới...
+                                            }
+                                        </p>
+                                    </div>
+                                </div>
+                            }
+
+                            <div id="blog-load-more-wrap" class="text-center mt-4 @(Model.HasMore ? string.Empty : "d-none")">
+                                <button type="button" id="blog-load-more" class="btn btn-success btn-lg rounded-pill px-5">
+                                    Xem thêm <i class="bi bi-arrow-down-circle"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 blog-sidebar-wrap">
+                            <div class="sidebar-card">
+                                <h4>Tìm kiếm bài viết</h4>
+                                <form asp-controller="Blog" asp-action="Index" method="get" class="search-box">
+                                    <input type="hidden" name="categoryName" value="@Model.SelectedCategorySlug">
+                                    <input type="text" name="searchTerm" value="@Model.SearchTerm"
+                                           placeholder="Nhập từ khóa...">
+                                    <button type="submit"><i class="bi bi-search"></i></button>
+                                </form>
+                            </div>
+
+                            <div class="sidebar-card">
+                                <h4>Chuyên mục</h4>
+                                <ul class="category-list">
+                                    <li
+                                        class="@(string.IsNullOrWhiteSpace(Model.SelectedCategoryName) ? "active" : string.Empty)">
+                                        <a asp-controller="Blog" asp-action="Index" asp-route-searchTerm="@Model.SearchTerm"
+                                           class="js-blog-category-link" data-category-name="" rel="nofollow">Tất cả bài viết</a>
+                                        <span>@Model.TotalPublishedPosts.ToString("D2")</span>
+                                    </li>
+                                    @foreach (var category in Model.Categories)
+                                    {
+                                        <li
+                                            class="@(string.Equals(category.Slug, Model.SelectedCategorySlug, StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty)">
+                                            <a asp-controller="Blog" asp-action="Index" asp-route-searchTerm="@Model.SearchTerm"
+                                               asp-route-categoryName="@category.Slug" class="js-blog-category-link"
+                                               data-category-name="@category.Slug" rel="nofollow">@category.Name</a>
+                                            <span>@category.PostCount.ToString("D2")</span>
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+
+                            <div class="sidebar-card">
+                                <h4>Bài viết nổi bật</h4>
+
+                                @if (Model.FeaturedPosts.Any())
+                                {
+                                    @foreach (var featuredPost in Model.FeaturedPosts.Take(5))
+                                    {
+                                        var featuredWordCount = string.IsNullOrWhiteSpace(featuredPost.Summary)
+                                            ? 0
+                                            : featuredPost.Summary.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+                                        var featuredReadingMinutes = Math.Max(3, (int)Math.Ceiling((featuredWordCount + 35) / 35d));
+                                        var featuredSummary = featuredPost.Summary?.Length > 58
+                                            ? $"{featuredPost.Summary[..55].TrimEnd()}..."
+                                            : featuredPost.Summary;
+
+                                        <a class="mini-post" asp-route="blog-detail-seo"
+                                               asp-route-slug="@featuredPost.Slug">
+                                            <div class="mini-thumb">
+                                                <img src="@featuredPost.CoverImage" alt="@featuredPost.Title" loading="lazy" decoding="async" width="172" height="144">
+                                            </div>
+                                            <div>
+                                                <span><i class="bi bi-heart-fill"></i> @featuredPost.LikeCount lượt thích</span>
+                                                <h5>@featuredPost.Title</h5>
+                                                <p>@featuredSummary</p>
+                                            </div>
+                                        </a>
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="mini-post">
+                                        <div class="mini-thumb">
+                                            <svg viewBox="0 0 90 72" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                                                <rect width="90" height="72" rx="16" fill="#edf7f1" />
+                                                <rect x="18" y="18" width="18" height="34" rx="8" fill="#d09d65" />
+                                                <rect x="42" y="16" width="22" height="38" rx="10" fill="#4ca7c8" />
+                                                <rect x="18" y="56" width="48" height="6" rx="3" fill="#c8d8d0" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <span><i class="bi bi-heart-fill"></i> 0 lượt thích</span>
+                                            <h5>Đang cập nhật bài viết nổi bật</h5>
+                                            <p>Danh sách 5 bài được thích nhiều nhất sẽ hiển thị tại đây.</p>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="sidebar-card">
+                                <h4>Từ khóa phổ biến</h4>
+                                <div class="tag-cloud">
+                                    <a href="#" class="tag js-popular-tag" data-keyword="giá phế liệu" rel="nofollow">giá phế liệu</a>
+                                    <a href="#" class="tag js-popular-tag" data-keyword="đồng đỏ" rel="nofollow">đồng đỏ</a>
+                                    <a href="#" class="tag js-popular-tag" data-keyword="sắt thép" rel="nofollow">sắt thép</a>
+                                    <a href="#" class="tag js-popular-tag" data-keyword="thanh lý kho" rel="nofollow">thanh lý kho</a>
+                                    <a href="#" class="tag js-popular-tag" data-keyword="máy móc cũ" rel="nofollow">máy móc cũ</a>
+                                    <a href="#" class="tag js-popular-tag" data-keyword="giấy carton" rel="nofollow">giấy carton</a>
+                                    <a href="#" class="tag js-popular-tag" data-keyword="nhựa công nghiệp" rel="nofollow">nhựa công nghiệp</a>
+                                    <a href="#" class="tag js-popular-tag" data-keyword="inox" rel="nofollow">inox</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        @section Scripts {
+            <script>
+                (() => {
+                    document.addEventListener('click', handlePostCardClick);
+                    const blogList = document.getElementById('blog-list');
+                    const loadMoreButton = document.getElementById('blog-load-more');
+                    const loadMoreWrap = document.getElementById('blog-load-more-wrap');
+                    const contactPhone = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ContactPhone));
+                    const searchForm = document.querySelector('.blog-sidebar-wrap .search-box');
+                    const searchInput = searchForm?.querySelector('input[name="searchTerm"]');
+                    const categoryInput = searchForm?.querySelector('input[name="categoryName"]');
+                    const popularTagLinks = document.querySelectorAll('.js-popular-tag');
+                    const mobileSearchButton = document.getElementById('blogMobileSearchBtn');
+                    const mobileSearchPopup = document.getElementById('blogMobileSearchPopup');
+                    const mobileSearchBackdrop = document.getElementById('blogMobileSearchBackdrop');
+                    const mobileSearchCloseButton = document.getElementById('blogMobileSearchCloseBtn');
+                    const mobileSearchForm = document.getElementById('blogMobileSearchForm');
+                    const mobileSearchInput = mobileSearchForm?.querySelector('input[name="searchTerm"]');
+                    const mobileCategoryInput = mobileSearchForm?.querySelector('input[name="categoryName"]');
+                    const mobilePopularTagLinks = document.querySelectorAll('.js-mobile-popular-tag');
+                    let lastSearchTerm = searchInput?.value?.trim() ?? mobileSearchInput?.value?.trim() ?? '';
+                    let lastCategoryName = categoryInput?.value?.trim() ?? mobileCategoryInput?.value?.trim() ?? blogList?.dataset.categoryName?.trim() ?? '';
+                    let nextCursor = blogList?.dataset.initialCursor || '';
+                    let hasMore = blogList?.dataset.hasMore === 'true';
+                    let isLoading = false;
+
+                    function getCurrentSearchTerm() {
+                        return searchInput?.value?.trim() ?? '';
+                    }
+
+                    function getCurrentCategoryName() {
+                        return categoryInput?.value?.trim() ?? '';
+                    }
+
+                    function setCurrentCategoryName(categoryName) {
+                        const normalizedCategoryName = categoryName?.trim() ?? '';
+
+                        if (categoryInput) {
+                            categoryInput.value = normalizedCategoryName;
+                        }
+
+                        if (mobileCategoryInput) {
+                            mobileCategoryInput.value = normalizedCategoryName;
+                        }
+
+                        if (blogList) {
+                            blogList.dataset.categoryName = normalizedCategoryName;
+                        }
+                    }
+
+                    function updateCategorySelection(categoryName) {
+                        const normalizedCategoryName = categoryName?.trim() ?? '';
+
+                        document.querySelectorAll('.category-list li').forEach(item => {
+                            const link = item.querySelector('.js-blog-category-link');
+                            const itemCategoryName = link?.dataset.categoryName?.trim() ?? '';
+                            const isActive = itemCategoryName === normalizedCategoryName;
+
+                            item.classList.toggle('active', isActive);
+
+                            if (link) {
+                                link.classList.toggle('active', isActive);
+                            }
+                        });
+                    }
+
+                    function buildEmptyStateMessage(keyword, categoryName) {
+                        if (keyword && categoryName) {
+                            return `Không tìm thấy bài viết nào phù hợp với từ khóa "${keyword}" trong chuyên mục "${categoryName}".`;
+                        }
+
+                        if (keyword) {
+                            return `Không tìm thấy bài viết nào phù hợp với từ khóa "${keyword}".`;
+                        }
+
+                        if (categoryName) {
+                            return `Chưa có bài viết nào trong chuyên mục "${categoryName}".`;
+                        }
+
+                        return 'Đang cập nhật bài viết mới...';
+                    }
+
+                    function resetUsefulButton(button) {
+                        if (!button) return;
+
+                        window.clearTimeout(button._cooldownTimerId);
+                        button.disabled = false;
+                        button.classList.remove('is-cooldown', 'is-loading');
+
+                        const label = button.querySelector('.js-post-useful-btn-label');
+                        if (label) {
+                            label.textContent = button.dataset.defaultLabel ?? 'Hữu ích';
+                        }
+                    }
+
+                    function setUsefulButtonCooldown(button, cooldownSecondsRemaining) {
+                        if (!button) return;
+
+                        const normalizedCooldown = Math.max(0, Number(cooldownSecondsRemaining) || 0);
+                        const label = button.querySelector('.js-post-useful-btn-label');
+
+                        window.clearTimeout(button._cooldownTimerId);
+                        button.disabled = true;
+                        button.classList.remove('is-loading');
+                        button.classList.add('is-cooldown');
+
+                        if (label) {
+                            label.textContent = 'Đã hữu ích';
+                        }
+
+                        if (normalizedCooldown > 0) {
+                            button._cooldownTimerId = window.setTimeout(() => {
+                                resetUsefulButton(button);
+                            }, normalizedCooldown * 1000);
+                        }
+                    }
+
+                    function setUsefulFeedback(postCard, message, isError = false) {
+                        const feedback = postCard?.querySelector('.js-post-useful-feedback');
+                        if (!feedback) return;
+
+                        feedback.textContent = message ?? '';
+                        feedback.classList.toggle('is-error', !!isError);
+                    }
+
+                    function updateUsefulCount(postCard, likeCount) {
+                        const count = postCard?.querySelector('.js-post-like-count');
+                        if (!count) return;
+
+                        count.textContent = String(Math.max(0, Number(likeCount) || 0));
+                    }
+
+                    const markUsefulUrl = '@Url.Action("MarkUseful", "Blog")';
+
+                    async function handleUsefulButtonClick(button) {
+                        if (!button || button.disabled) {
+                            return;
+                        }
+
+                        const postId = Number(button.dataset.postId);
+                        if (!postId) {
+                            return;
+                        }
+
+                        const postCard = button.closest('.post-card');
+                        const label = button.querySelector('.js-post-useful-btn-label');
+
+                        button.disabled = true;
+                        button.classList.add('is-loading');
+
+                        if (label) {
+                            label.textContent = 'Đang lưu...';
+                        }
+
+                        setUsefulFeedback(postCard, '');
+
+                        try {
+                            const response = await fetch(markUsefulUrl, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                },
+                                credentials: 'same-origin',
+                                body: new URLSearchParams({
+                                    id: String(postId)
+                                })
+                            });
+
+                            if (!response.ok) {
+                                throw new Error('Request failed');
+                            }
+
+                            const data = await response.json();
+
+                            if (typeof data.likeCount !== 'undefined') {
+                                updateUsefulCount(postCard, data.likeCount);
+                            }
+
+                            setUsefulFeedback(postCard, data.message ?? '', !data.success);
+
+                            if (data.success || Number(data.cooldownSecondsRemaining) > 0) {
+                                setUsefulButtonCooldown(button, data.cooldownSecondsRemaining);
+                                return;
+                            }
+
+                            resetUsefulButton(button);
+                        } catch {
+                            setUsefulFeedback(postCard, 'Không thể gửi đánh giá hữu ích lúc này.', true);
+                            resetUsefulButton(button);
+                        }
+                    }
+
+                    function handlePostCardClick(event) {
+                        const postCard = event.target.closest('.js-post-card');
+                        if (!postCard) {
+                            return;
+                        }
+
+                        if (event.target.closest('a, button')) {
+                            return;
+                        }
+
+                        const detailUrl = postCard.dataset.detailUrl;
+                        if (!detailUrl) {
+                            return;
+                        }
+
+                        window.location.href = detailUrl;
+                    }
+
+                    function isMobileViewport() {
+                        return window.matchMedia('(max-width: 767.98px)').matches;
+                    }
+
+                    function closeMobileSearchPopup() {
+                        if (!mobileSearchPopup || !mobileSearchBackdrop) {
+                            return;
+                        }
+
+                        mobileSearchPopup.classList.remove('is-open');
+                        mobileSearchBackdrop.classList.remove('is-open');
+                        document.body.classList.remove('blog-mobile-search-open');
+                    }
+
+                    function openMobileSearchPopup() {
+                        if (!mobileSearchPopup || !mobileSearchBackdrop || !isMobileViewport()) {
+                            return;
+                        }
+
+                        if (mobileSearchInput) {
+                            mobileSearchInput.value = getCurrentSearchTerm();
+                        }
+
+                        if (mobileCategoryInput) {
+                            mobileCategoryInput.value = getCurrentCategoryName();
+                        }
+
+                        mobileSearchPopup.classList.add('is-open');
+                        mobileSearchBackdrop.classList.add('is-open');
+                        document.body.classList.add('blog-mobile-search-open');
+                    }
+ 
+function renderPosts(posts, append = false) {
+                        if (!blogList) return;
+
+                        if (!posts || posts.length === 0) {
+                            if (append) {
+                                return;
+                            }
+
+                            const keyword = getCurrentSearchTerm();
+                            const categoryName = getCurrentCategoryName();
+                            const message = buildEmptyStateMessage(keyword, categoryName);
+
+                            blogList.innerHTML = `
+                                                            <div class="col-12 text-center py-4">
+                                                                <p class="text-muted mb-0">${message}</p>
+                                                            </div>`;
+                            return;
+                        }
+
+                        const rendered = posts.map((post, index) => {
+                                                        const imageSequence = Array.isArray(post.imageSequence)
+                                                            ? post.imageSequence.filter(Boolean)
+                                                            : [];
+                                                        const coverImage = post.coverImage ?? '/assets/img/blog/blog-1.jpg';
+                                                        const resolvedImageSequence = imageSequence.length > 0 ? imageSequence : [coverImage];
+
+                                                        return `
+                                                        <div class="col-12 col-md-6" data-aos="fade-up" data-aos-delay="${100 + (index % 6) * 50}">
+                                                            <article class="post-card h-100 js-post-card" data-detail-url="${post.detailUrl ?? '/Blog'}">
+                                                                <div class="post-visual materials-card-media">
+                                                                    <img src="${coverImage}" alt="${post.title ?? 'Tin tức'}" class="img-fluid w-100 h-100 materials-hover-image js-blog-card-image" data-image-sequence="${resolvedImageSequence.join('|')}" data-default-image="${coverImage}" loading="${index === 0 ? 'eager' : 'lazy'}" fetchpriority="${index === 0 ? 'high' : 'auto'}" decoding="async" width="640" height="480" style="object-fit: cover;">
+                                                                    <span class="materials-phone-overlay">${contactPhone}</span>
+                                                                </div>
+                                                                <div class="post-body">
+                                                                    <div class="post-meta">
+                                                                        <span><i class="bi bi-calendar-event"></i> ${post.publishedAt ?? 'Đang cập nhật'}</span>
+                                                                        <span><i class="bi bi-folder2-open"></i> ${post.categoryName ?? 'Tin tức'}</span>
+                                                                        <span><i class="bi bi-person"></i> Tác giả: ${post.authorName && post.authorName.trim() ? post.authorName : 'Lê Thị Hồng'}</span>
+                                                                    </div>
+                                                                    <h3>${post.title ?? 'Tin tức đang cập nhật'}</h3>
+                                                                    <p class="post-excerpt">${post.summary ?? 'Nội dung bài viết đang được cập nhật.'}</p>
+                                                                    <div class="post-actions">
+                                                                        <button type="button"
+                                                                                class="post-useful-btn js-post-useful-btn"
+                                                                                data-post-id="${post.id}"
+                                                                                data-default-label="Hữu ích">
+                                                                            <i class="bi bi-hand-thumbs-up"></i>
+                                                                            <span class="js-post-useful-btn-label">Hữu ích</span>
+                                                                        </button>
+                                                                        <span class="post-like-count">
+                                                                            <i class="bi bi-heart-fill"></i>
+                                                                            <span class="js-post-like-count">${post.likeCount ?? 0}</span> lượt hữu ích
+                                                                        </span>
+                                                                    </div>
+                                                                    <p class="post-useful-feedback js-post-useful-feedback" aria-live="polite"></p>
+                                                                    <a href="${post.detailUrl ?? '/Blog'}" class="post-link"><i class="bi bi-arrow-right-circle-fill"></i> Xem chi tiết</a>
+                                                                </div>
+                                                            </article>
+                                                        </div>`;
+                        }).join('');
+
+                        if (append) {
+                            blogList.insertAdjacentHTML('beforeend', rendered);
+                        } else {
+                            blogList.innerHTML = rendered;
+                        }
+
+                        initializeBlogCardImageRotation();
+                    }
+
+                    function updateLoadMoreButton() {
+                        if (!loadMoreButton || !loadMoreWrap) {
+                            return;
+                        }
+
+                        loadMoreButton.disabled = isLoading;
+                        loadMoreButton.innerHTML = isLoading
+                            ? 'Đang tải...'
+                            : 'Xem thêm <i class="bi bi-arrow-down-circle"></i>';
+                        loadMoreWrap.classList.toggle('d-none', !hasMore);
+                    }
+
+                    async function fetchPosts(cursor, append, shouldPushHistory = true) {
+                        if (isLoading) {
+                            return;
+                        }
+
+                        isLoading = true;
+                        updateLoadMoreButton();
+
+                        const keyword = getCurrentSearchTerm();
+                        const categoryName = getCurrentCategoryName();
+                        const params = new URLSearchParams();
+
+                        if (cursor) {
+                            params.set('cursor', cursor);
+                        }
+
+                        if (keyword) {
+                            params.set('searchTerm', keyword);
+                        }
+
+                        if (categoryName) {
+                            params.set('categoryName', categoryName);
+                        }
+
+                        try {
+                            const response = await fetch(`/Blog/GetBlogsCursor?${params.toString()}`, {
+                                headers: {
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                }
+                            });
+
+                            if (!response.ok) {
+                                return;
+                            }
+
+                            const data = await response.json();
+
+                            if (searchInput) {
+                                searchInput.value = data.searchTerm ?? '';
+                            }
+
+                            if (mobileSearchInput) {
+                                mobileSearchInput.value = data.searchTerm ?? '';
+                            }
+
+                            const selectedCategorySlug = data.selectedCategorySlug ?? data.selectedCategoryName ?? '';
+
+                            setCurrentCategoryName(selectedCategorySlug);
+                            lastSearchTerm = (data.searchTerm ?? '').trim();
+                            lastCategoryName = selectedCategorySlug.trim();
+
+                            nextCursor = data.nextCursor ?? '';
+                            hasMore = data.hasMore === true;
+
+                            renderPosts(data.posts, append);
+                            updateCategorySelection(selectedCategorySlug);
+
+                            const historyParams = new URLSearchParams();
+
+                            if (data.searchTerm) {
+                                historyParams.set('searchTerm', data.searchTerm);
+                            }
+
+                            if (selectedCategorySlug) {
+                                historyParams.set('categoryName', selectedCategorySlug);
+                            }
+
+                            if (shouldPushHistory) {
+                                window.history.pushState({}, '', `/Blog?${historyParams.toString()}`);
+                            }
+                        } finally {
+                            isLoading = false;
+                            updateLoadMoreButton();
+                        }
+                    }
+
+                    function resetPostList() {
+                        nextCursor = '';
+                        hasMore = true;
+                        renderPosts([]);
+                        fetchPosts('', false);
+                    }
+
+                    function initializeBlogCardImageRotation() {
+                        document.querySelectorAll('#blog-list .materials-card-media').forEach(mediaElement => {
+                            const imageElement = mediaElement.querySelector('img');
+
+                            if (!imageElement || imageElement.dataset.rotationInitialized === 'true') {
+                                return;
+                            }
+
+                            const sequence = (imageElement.dataset.imageSequence || '')
+                                .split('|')
+                                .map(item => item.trim())
+                                .filter(Boolean);
+
+                            if (sequence.length <= 1) {
+                                imageElement.dataset.rotationInitialized = 'true';
+                                return;
+                            }
+
+                            const defaultImage = imageElement.dataset.defaultImage || sequence[0];
+                            let intervalId = null;
+                            let currentIndex = 0;
+
+                            const showImageAtIndex = index => {
+                                currentIndex = ((index % sequence.length) + sequence.length) % sequence.length;
+                                imageElement.src = sequence[currentIndex] || defaultImage;
+                            };
+
+                            const startHoverRotation = () => {
+                                if (intervalId) {
+                                    return;
+                                }
+
+                                showImageAtIndex(1);
+
+                                intervalId = window.setInterval(() => {
+                                    showImageAtIndex(currentIndex + 1);
+                                }, 900);
+                            };
+
+                            const stopHoverRotation = () => {
+                                if (intervalId) {
+                                    window.clearInterval(intervalId);
+                                    intervalId = null;
+                                }
+
+                                showImageAtIndex(0);
+                                imageElement.src = defaultImage;
+                            };
+
+                            imageElement.dataset.rotationInitialized = 'true';
+                            mediaElement.addEventListener('mouseenter', startHoverRotation);
+                            mediaElement.addEventListener('mouseleave', stopHoverRotation);
+                        });
+                    }
+
+                    function bindPopularTagSearch() {
+                        popularTagLinks.forEach(link => {
+                            link.addEventListener('click', event => {
+                                event.preventDefault();
+
+                                const keyword = link.dataset.keyword?.trim() ?? '';
+
+                                if (!keyword || !searchInput) {
+                                    return;
+                                }
+
+                                if (searchInput) {
+                                    searchInput.value = keyword;
+                                }
+
+                                if (mobileSearchInput) {
+                                    mobileSearchInput.value = keyword;
+                                }
+
+                                lastSearchTerm = keyword;
+                                resetPostList();
+                                closeMobileSearchPopup();
+                            });
+                        });
+                    }
+
+                    function bindMobilePopularTagSearch() {
+                        mobilePopularTagLinks.forEach(link => {
+                            link.addEventListener('click', event => {
+                                event.preventDefault();
+
+                                const keyword = link.dataset.keyword?.trim() ?? '';
+                                if (!keyword) {
+                                    return;
+                                }
+
+                                if (searchInput) {
+                                    searchInput.value = keyword;
+                                }
+
+                                if (mobileSearchInput) {
+                                    mobileSearchInput.value = keyword;
+                                }
+
+                                lastSearchTerm = keyword;
+                                resetPostList();
+                                closeMobileSearchPopup();
+                            });
+                        });
+                    }
+
+                    function bindCategoryFilter() {
+                        document.querySelectorAll('.js-blog-category-link').forEach(link => {
+                            link.addEventListener('click', event => {
+                                event.preventDefault();
+
+                                const categoryName = link.dataset.categoryName?.trim() ?? '';
+                                setCurrentCategoryName(categoryName);
+                                lastCategoryName = categoryName;
+                                updateCategorySelection(categoryName);
+                                resetPostList();
+                            });
+                        });
+                    }
+
+                    if (blogList) {
+                        blogList.addEventListener('click', event => {
+                            const button = event.target.closest('.js-post-useful-btn');
+                            if (!button) {
+                                return;
+                            }
+
+                            event.preventDefault();
+                            handleUsefulButtonClick(button);
+                        });
+                    }
+
+                    initializeBlogCardImageRotation();
+                    bindPopularTagSearch();
+                    bindMobilePopularTagSearch();
+                    bindCategoryFilter();
+                    updateCategorySelection(lastCategoryName);
+                    updateLoadMoreButton();
+
+                    if (loadMoreButton) {
+                        loadMoreButton.addEventListener('click', () => {
+                            if (!hasMore || !nextCursor) {
+                                return;
+                            }
+                            fetchPosts(nextCursor, true);
+                        });
+                    }
+
+                    if (mobileSearchButton) {
+                        mobileSearchButton.addEventListener('click', openMobileSearchPopup);
+                    }
+
+                    if (mobileSearchCloseButton) {
+                        mobileSearchCloseButton.addEventListener('click', closeMobileSearchPopup);
+                    }
+
+                    if (mobileSearchBackdrop) {
+                        mobileSearchBackdrop.addEventListener('click', closeMobileSearchPopup);
+                    }
+
+                    if (searchForm) {
+                        searchForm.addEventListener('submit', event => {
+                            event.preventDefault();
+
+                            if (mobileSearchInput && searchInput) {
+                                mobileSearchInput.value = searchInput.value;
+                            }
+
+                            resetPostList();
+                        });
+                    }
+
+                    if (mobileSearchForm) {
+                        mobileSearchForm.addEventListener('submit', event => {
+                            event.preventDefault();
+
+                            if (searchInput && mobileSearchInput) {
+                                searchInput.value = mobileSearchInput.value;
+                            }
+
+                            resetPostList();
+                            closeMobileSearchPopup();
+                        });
+                    }
+
+                    if (searchInput) {
+                        searchInput.addEventListener('input', () => {
+                            const currentSearchTerm = getCurrentSearchTerm();
+
+                            if (lastSearchTerm && !currentSearchTerm) {
+                                resetPostList();
+                            }
+
+                            lastSearchTerm = currentSearchTerm;
+                        });
+                    }
+
+                    window.addEventListener('popstate', () => {
+                        const params = new URLSearchParams(window.location.search);
+
+                        if (searchInput) {
+                            searchInput.value = params.get('searchTerm') ?? '';
+                        }
+
+                        if (mobileSearchInput) {
+                            mobileSearchInput.value = params.get('searchTerm') ?? '';
+                        }
+
+                        setCurrentCategoryName(params.get('categoryName') ?? '');
+                        lastSearchTerm = getCurrentSearchTerm();
+                        lastCategoryName = getCurrentCategoryName();
+                        updateCategorySelection(lastCategoryName);
+                        closeMobileSearchPopup();
+                        resetPostList();
+                    });
+                })();
+            </script>
+        }

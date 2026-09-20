@@ -1,0 +1,1399 @@
+@inject WebThuMuaPheLieu.helpper.IContactInfoHelper ContactInfoHelper
+@inject WebThuMuaPheLieu.Services.IStructuredDataService StructuredDataService
+@model WebThuMuaPheLieu.ViewModels.ProductDetailViewModel
+@using System.Net
+@using System.Text.RegularExpressions
+@{
+  Layout = "_HomeLayout";
+  ViewData["BodyClass"] = "home-detail-page";
+  ViewData["NeedsSwiper"] = true;
+  ViewData["NeedsBungee"] = true;
+  ViewData["NeedsMaterialSymbols"] = true;
+}
+
+@{
+  ViewData["Title"] = Model.Product.Name;
+  var contactInfo = await ContactInfoHelper.GetContactInfoAsync();
+
+  string NormalizeAssetUrl(string? url)
+  {
+    if (string.IsNullOrWhiteSpace(url))
+    {
+      return "/images/no-image.png";
+    }
+
+    var normalized = url.Replace("\\", "/").Trim();
+
+    if (normalized.StartsWith("~/"))
+    {
+      return $"/{normalized[2..]}";
+    }
+
+    if (normalized.StartsWith("http://") || normalized.StartsWith("https://") || normalized.StartsWith("/"))
+    {
+      return normalized;
+    }
+
+    return "/" + normalized.TrimStart('/');
+  }
+
+  var galleryImages = Model.Images?.OrderBy(x => x.OrderIndex).ToList() ?? new List<ProductImage>();
+
+  var coverImage = !string.IsNullOrWhiteSpace(Model.Product.PrimaryImage)
+      ? NormalizeAssetUrl(Model.Product.PrimaryImage)
+      : (galleryImages.Any() ? NormalizeAssetUrl(galleryImages.First().ImageUrl) : "/images/no-image.png");
+
+  var primaryImage = coverImage;
+  var primaryAlt = Model.Product.Name;
+  var heroTitle = Model.Product.Name;
+  var heroDescriptionHtml = !string.IsNullOrWhiteSpace(Model.Product.Description)
+      ? Model.Product.Description
+      : !string.IsNullOrWhiteSpace(Model.Product.ShortDescription)
+          ? Model.Product.ShortDescription
+          : "Thông tin sản phẩm đang được cập nhật.";
+
+  string ToPlainText(string? html)
+  {
+    if (string.IsNullOrWhiteSpace(html))
+    {
+      return "";
+    }
+
+    var decoded = WebUtility.HtmlDecode(html);
+    var noTags = Regex.Replace(decoded, "<[^>]+>", " ");
+    return Regex.Replace(noTags, "\\s+", " ").Trim();
+  }
+
+  var shortDescription = !string.IsNullOrWhiteSpace(Model.Product.ShortDescription)
+      ? ToPlainText(Model.Product.ShortDescription)
+      : !string.IsNullOrWhiteSpace(Model.Product.Description)
+          ? ToPlainText(Model.Product.Description)
+          : "Thông tin đang được cập nhật.";
+
+  var heroDescriptionPlain = ToPlainText(heroDescriptionHtml);
+
+  ViewData["Description"] = shortDescription;
+  if (!string.IsNullOrWhiteSpace(Model.Product.SeoKeyword))
+  {
+    ViewData["Keywords"] = Model.Product.SeoKeyword;
+  }
+
+  var seoSlug = !string.IsNullOrWhiteSpace(Model.Product.Slug) ? Model.Product.Slug : Model.Product.Id.ToString();
+  var seoPath = Url.RouteUrl("product-detail-seo", new { slug = seoSlug }) ?? $"/san-pham/{seoSlug}";
+  ViewData["Canonical"] = $"{Context.Request.Scheme}://{Context.Request.Host}{seoPath}";
+  ViewData["OgType"] = "product";
+  var structuredDataJson = StructuredDataService.SerializeSchemas(StructuredDataService.BuildProductDetailSchemas(Context, Model));
+  var contactPhoneDigits = new string((contactInfo.Phone ?? string.Empty).Where(char.IsDigit).ToArray());
+  var productDetailPhoneHref = string.IsNullOrWhiteSpace(contactPhoneDigits) ? "tel:0974640626" : $"tel:{contactPhoneDigits}";
+  var productDetailZaloHref = string.IsNullOrWhiteSpace(contactInfo.Zalo) || contactInfo.Zalo == "#"
+      ? "https://zalo.me/0974640626"
+      : contactInfo.Zalo;
+  var formattedPrice = !string.IsNullOrWhiteSpace(Model.Product.PriceLabel)
+      ? Model.Product.PriceLabel
+      : (Model.Product.PriceValue.HasValue
+          ? $"{Model.Product.PriceValue.Value:N0} đ/{Model.Product.Unit}"
+          : "Liên hệ");
+  var priceLabel = "Giá thu mua";
+  var priceNote = "Giá có thể thay đổi theo chất lượng và số lượng";
+
+  var trendIcon = "info";
+  var trendText = "Giá mớí nhất ";
+
+  var histories = Model.PriceHistories?
+      .Where(x => x.PriceValue.HasValue)
+      .OrderByDescending(x => x.EffectiveDate)
+      .ToList() ?? new List<PriceHistory>();
+
+  if (histories.Count >= 2)
+  {
+    var latestPrice = histories[0].PriceValue ?? 0;
+    var previousPrice = histories[1].PriceValue ?? 0;
+
+    if (previousPrice > 0)
+    {
+      var percentChange = ((latestPrice - previousPrice) / previousPrice) * 100;
+
+      if (percentChange > 0)
+      {
+        trendIcon = "trending_up";
+        trendText = $"Tăng {Math.Abs(percentChange):0.#}% so với kỳ trước";
+      }
+      else if (percentChange < 0)
+      {
+        trendIcon = "trending_down";
+        trendText = $"Giảm {Math.Abs(percentChange):0.#}% so với kỳ trước";
+      }
+      else
+      {
+        trendIcon = "trending_flat";
+        trendText = "Giá giữ ổn định so với kỳ trước";
+      }
+    }
+    else
+    {
+      trendIcon = "info";
+      trendText = "Giá vừa được cập nhật";
+    }
+  }
+  else if (histories.Count == 1)
+  {
+    trendIcon = "schedule";
+    trendText = "Giá mới nhất đã được cập nhật";
+  }
+}
+
+@section Head {
+  <partial name="_StructuredData" model="structuredDataJson" />
+}
+@section Styles {
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+  <link href="~/css/detail.css" rel="stylesheet" asp-append-version="true" />
+  <style>
+    @@media (max-width: 768px) {
+      .section-header h2:before,
+      .section-header h2:after {
+        display: none;
+      }
+    }
+
+    /* Scope styles for Home/Detail only */
+    body.home-detail-page .detail-main,
+    body.home-detail-page .detail-main * {
+      box-sizing: border-box;
+    }
+
+    body.home-detail-page .detail-main a {
+      text-decoration: none;
+    }
+
+    body.home-detail-page .detail-main img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+    }
+
+    body.home-detail-page .detail-main button {
+      color: inherit;
+    }
+
+    /* Fix product image card width on Home/Detail */
+    body.home-detail-page .detail-thumb-grid {
+      align-items: stretch;
+    }
+
+    body.home-detail-page .detail-thumb {
+      display: block;
+      width: 100%;
+      padding: 0;
+      background: transparent;
+      min-height: 0;
+    }
+
+    body.home-detail-page .detail-thumb img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: inherit;
+      object-fit: cover;
+    }
+
+    body.home-detail-page .detail-thumb-caption {
+      left: 0;
+      right: 0;
+      width: auto;
+    }
+
+    body.home-detail-page .detail-page-banner {
+      position: relative;
+      overflow: hidden;
+      padding: 88px 0 120px;
+      color: #fff;
+      background-color: #15803d;
+      background-image: linear-gradient(rgba(21, 128, 61, 0.88), rgba(21, 128, 61, 0.9)), url('/assets/default/ảnh%20nền.png');
+      background-size: cover;
+      background-position: center;
+    }
+
+    body.home-detail-page .detail-page-banner::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, rgba(15, 23, 42, 0.12), rgba(15, 23, 42, 0.02));
+    }
+
+    body.home-detail-page .detail-page-banner::after {
+      content: "";
+      position: absolute;
+      inset: auto 0 0 0;
+      height: 120px;
+      background: linear-gradient(180deg, rgba(21, 128, 61, 0) 0%, rgba(21, 128, 61, 0.16) 35%, rgba(248, 250, 252, 1) 100%);
+      pointer-events: none;
+    }
+
+    body.home-detail-page .detail-page-banner-inner {
+      position: relative;
+      z-index: 1;
+      max-width: 860px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    body.home-detail-page .detail-page-banner-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      margin-bottom: 1rem;
+      padding: 0.45rem 0.9rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.16);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: #f8fafc;
+      text-transform: uppercase;
+    }
+
+    body.home-detail-page .detail-page-banner-kicker .material-symbols-outlined {
+      font-size: 1rem;
+    }
+
+    body.home-detail-page .detail-page-banner-title {
+      margin: 0;
+      color: #ffffff;
+      font-size: clamp(2rem, 5vw, 3.4rem);
+      font-weight: 900;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+    }
+
+    body.home-detail-page .detail-page-banner-summary {
+      margin: 1rem auto 0;
+      max-width: 760px;
+      font-size: 1rem;
+      line-height: 1.75;
+      color: rgba(255, 255, 255, 0.92);
+    }
+
+    /* Mobile only for Home/Detail */
+    @@media (max-width: 768px) {
+      body.home-detail-page {
+        overflow-x: hidden;
+      }
+
+      body.home-detail-page .detail-shell {
+        width: min(100%, calc(100% - 24px));
+        margin: 0 auto;
+        padding-left: 0;
+        padding-right: 0;
+      }
+
+      body.home-detail-page .detail-trust-highlight {
+        padding: 18px 16px;
+        border-radius: 20px;
+      }
+
+      body.home-detail-page .detail-trust-highlight h2 {
+        font-size: 1.6rem;
+        line-height: 1.3;
+      }
+
+      body.home-detail-page .detail-trust-highlight p {
+        font-size: 0.95rem;
+        line-height: 1.6;
+      }
+
+      body.home-detail-page .detail-trust-stats {
+        gap: 12px;
+      }
+
+      body.home-detail-page .detail-trust-stat {
+        padding: 14px;
+        border-radius: 16px;
+      }
+
+      body.home-detail-page .detail-trust-stat strong {
+        font-size: 1.6rem;
+      }
+
+      body.home-detail-page .detail-trust-stat span {
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+      }
+
+      body.home-detail-page .detail-main {
+        padding-top: 0;
+      }
+
+      body.home-detail-page .detail-page-banner {
+        padding: 60px 0 110px;
+      }
+
+      body.home-detail-page .detail-page-banner-kicker {
+        margin-bottom: 0.9rem;
+      }
+
+      body.home-detail-page .detail-page-banner-title {
+        font-size: 2rem;
+      }
+
+      body.home-detail-page .detail-page-banner-summary {
+        font-size: 0.98rem;
+        line-height: 1.7;
+      }
+
+      body.home-detail-page .detail-section,
+      body.home-detail-page .detail-soft-section,
+      body.home-detail-page .detail-process-section,
+      body.home-detail-page .detail-trust-section {
+        padding-top: 24px;
+        padding-bottom: 24px;
+      }
+
+      body.home-detail-page .detail-grid-hero,
+      body.home-detail-page .detail-two-col,
+      body.home-detail-page .detail-trust-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+
+      body.home-detail-page .detail-gallery-stack,
+      body.home-detail-page .detail-content-stack {
+        gap: 12px;
+      }
+
+      body.home-detail-page .detail-hero-main {
+        min-height: 0;
+        height: clamp(250px, 72vw, 360px);
+        border-radius: 20px;
+      }
+
+      body.home-detail-page .detail-news-desc {
+        font-size: 0.95rem;
+        line-height: 1.65;
+        padding: 0 4px;
+      }
+
+      body.home-detail-page .detail-hero-main img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      body.home-detail-page #hero-main-desc span:last-child {
+        position: static !important;
+        display: block;
+        margin: 8px 0 0 0 !important;
+        font-size: 16px !important;
+        text-align: left;
+        white-space: nowrap !important;
+      }
+
+      body.home-detail-page #hero-main-desc span:first-child {
+        padding-right: 0 !important;
+      }
+
+      body.home-detail-page .detail-hero-overlay {
+        padding: 14px;
+      }
+
+      body.home-detail-page .detail-hero-overlay-inner {
+        gap: 8px;
+      }
+
+      body.home-detail-page .detail-hero-title {
+        font-size: 1.05rem;
+        line-height: 1.3;
+      }
+
+      body.home-detail-page .detail-hero-desc {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 0.84rem;
+        line-height: 1.55;
+        max-width: 100%;
+      }
+
+      body.home-detail-page .detail-hero-desc-text {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+
+      body.home-detail-page .detail-hero-desc-phone {
+        flex: 0 0 auto;
+        margin-left: auto;
+        color: #ffd54a;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      body.home-detail-page .detail-thumb-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      body.home-detail-page .detail-thumb {
+        border-radius: 14px;
+      }
+
+      body.home-detail-page .detail-thumb-caption {
+        padding: 6px 8px;
+        font-size: 10px;
+      }
+
+      body.home-detail-page .detail-service-badge,
+      body.home-detail-page .detail-referral-badge,
+      body.home-detail-page .detail-pill,
+      body.home-detail-page .detail-trust-badge {
+        max-width: 100%;
+        white-space: normal;
+        line-height: 1.4;
+      }
+
+      body.home-detail-page .detail-heading-block h1,
+      body.home-detail-page .detail-section-head h2,
+      body.home-detail-page .detail-process-head h2,
+      body.home-detail-page .detail-trust-highlight h2,
+      body.home-detail-page .detail-referral-card h2,
+      body.home-detail-page .detail-referral-title {
+        font-size: clamp(1.4rem, 6vw, 1.85rem);
+        line-height: 1.25;
+        letter-spacing: 0.01em;
+      }
+
+      body.home-detail-page .detail-heading-block p,
+      body.home-detail-page .detail-process-head p,
+      body.home-detail-page .detail-referral-card p,
+      body.home-detail-page .detail-trust-highlight p,
+      body.home-detail-page .detail-review-text,
+      body.home-detail-page .detail-process-card p {
+        font-size: 0.95rem;
+        line-height: 1.7;
+      }
+
+      body.home-detail-page .detail-price-box {
+        padding: 16px 16px 14px;
+        border-radius: 20px;
+      }
+
+      body.home-detail-page .detail-price-box-inner {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 12px;
+      }
+
+      body.home-detail-page .detail-price-row {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+      }
+
+      body.home-detail-page .detail-price-label {
+        margin-bottom: 8px;
+      }
+
+      body.home-detail-page .detail-price-value {
+        display: block;
+        width: 100%;
+        font-size: clamp(1.55rem, 7vw, 2rem);
+        line-height: 1.2;
+        word-break: break-word;
+      }
+
+      body.home-detail-page .detail-price-note,
+      body.home-detail-page .detail-trend-pill {
+        display: block;
+        max-width: 100%;
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+
+      body.home-detail-page .detail-trend-pill {
+        width: 100%;
+        justify-content: flex-start;
+        align-items: flex-start;
+        border-radius: 16px;
+        padding: 10px 12px;
+        font-size: 0.88rem;
+      }
+
+      body.home-detail-page .detail-feature-grid,
+      body.home-detail-page .detail-referral-grid,
+      body.home-detail-page .detail-process-grid,
+      body.home-detail-page .detail-trust-stats,
+      body.home-detail-page .detail-trust-tags {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      body.home-detail-page .detail-feature-grid {
+        display: none;
+      }
+
+      body.home-detail-page .detail-feature-item {
+        min-height: 54px;
+        padding: 12px 14px;
+        margin-bottom: 0;
+        border-radius: 16px;
+      }
+
+      body.home-detail-page .detail-action-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        padding-top: 4px;
+      }
+
+      body.home-detail-page .detail-related-carousel-wrap {
+        margin-left: -4px;
+        margin-right: -4px;
+      }
+
+      body.home-detail-page .detail-related-products-swiper {
+        overflow: visible;
+      }
+
+      body.home-detail-page .detail-related-products-swiper .swiper-slide {
+        height: auto;
+      }
+
+      body.home-detail-page .detail-related-card {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+        border-radius: 18px;
+        overflow: hidden;
+      }
+
+      body.home-detail-page .detail-related-card .materials-badge {
+        max-width: calc(100% - 16px);
+      }
+
+      body.home-detail-page .detail-related-card .materials-card-body {
+        flex: 1 1 auto;
+        width: 100%;
+        padding: 14px 14px 16px;
+      }
+
+      body.home-detail-page .detail-related-card .card-title {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      body.home-detail-page .detail-btn-hotline,
+      body.home-detail-page .detail-btn-zalo,
+      body.home-detail-page .detail-btn-primary,
+      body.home-detail-page .detail-btn-contact {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 52px;
+        padding: 12px 14px;
+        border-radius: 16px;
+        font-size: 0.94rem;
+        line-height: 1.35;
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      body.home-detail-page .detail-btn-hotline .material-symbols-outlined,
+      body.home-detail-page .detail-btn-zalo .material-symbols-outlined,
+      body.home-detail-page .detail-btn-primary .material-symbols-outlined,
+      body.home-detail-page .detail-btn-contact .material-symbols-outlined {
+        flex: 0 0 auto;
+        font-size: 19px !important;
+        line-height: 1;
+      }
+
+      body.home-detail-page .detail-soft-panel,
+      body.home-detail-page .detail-referral-card,
+      body.home-detail-page .detail-process-panel,
+      body.home-detail-page .detail-trust-highlight,
+      body.home-detail-page .detail-review-card {
+        padding: 18px 16px;
+        border-radius: 20px;
+      }
+
+      body.home-detail-page .detail-section-head-row,
+      body.home-detail-page .detail-review-top,
+      body.home-detail-page .detail-review-footer {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      body.home-detail-page .detail-referral-visual {
+        min-height: 300px;
+        border-radius: 20px;
+      }
+
+      body.home-detail-page .detail-referral-overlay {
+        left: 14px;
+        right: 14px;
+        bottom: 14px;
+        padding: 20px 16px 16px;
+        border-radius: 16px;
+      }
+
+      body.home-detail-page .detail-referral-overlay p:first-child {
+        margin-top: 0;
+        margin-bottom: 8px;
+      }
+
+      body.home-detail-page .detail-referral-overlay h3 {
+        margin-top: 0;
+        margin-bottom: 10px;
+        font-size: 1.2rem;
+        line-height: 1.3;
+      }
+
+      body.home-detail-page .detail-referral-overlay p:nth-of-type(2) {
+        margin-top: 0;
+        line-height: 1.65;
+      }
+
+      body.home-detail-page .detail-referral-tags {
+        margin-top: 14px;
+      }
+
+      body.home-detail-page .detail-process-grid-wrap {
+        margin-top: 24px;
+      }
+
+      body.home-detail-page .detail-process-card {
+        padding: 18px 16px;
+        border-radius: 18px;
+      }
+
+      body.home-detail-page .detail-process-top {
+        gap: 12px;
+      }
+
+      body.home-detail-page .detail-process-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+      }
+
+      body.home-detail-page .detail-process-step-label {
+        margin-top: 18px;
+      }
+
+      body.home-detail-page .detail-trust-stat strong {
+        font-size: 1.8rem;
+      }
+
+      body.home-detail-page .detail-review-user {
+        gap: 12px;
+      }
+
+      body.home-detail-page .detail-review-avatar {
+        width: 52px;
+        height: 52px;
+      }
+
+      body.home-detail-page .detail-review-card,
+      body.home-detail-page .detail-process-card,
+      body.home-detail-page .detail-referral-item,
+      body.home-detail-page .detail-trust-stat,
+      body.home-detail-page .detail-trust-tags div {
+        overflow-wrap: anywhere;
+      }
+
+      body.home-detail-page .detail-main table {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      body.home-detail-page .detail-main img,
+      body.home-detail-page .detail-main iframe,
+      body.home-detail-page .detail-main video {
+        max-width: 100%;
+        height: auto;
+      }
+    }
+    
+
+    /* Small mobile only for Home/Detail */
+    
+    @@media (max-width: 480px) {
+      body.home-detail-page .detail-shell {
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+
+      body.home-detail-page .detail-main {
+        padding-top: 0;
+      }
+
+      body.home-detail-page .detail-page-banner {
+        padding: 54px 0 96px;
+      }
+
+      body.home-detail-page .detail-page-banner-title {
+        font-size: 1.7rem;
+      }
+
+      body.home-detail-page .detail-page-banner-summary {
+        font-size: 0.92rem;
+        line-height: 1.65;
+      }
+
+      body.home-detail-page .detail-section,
+      body.home-detail-page .detail-soft-section,
+      body.home-detail-page .detail-process-section,
+      body.home-detail-page .detail-trust-section {
+        padding-top: 20px;
+        padding-bottom: 20px;
+      }
+
+      body.home-detail-page .detail-hero-main {
+        height: clamp(220px, 70vw, 300px);
+        border-radius: 18px;
+      }
+
+      body.home-detail-page .detail-hero-overlay {
+        padding: 12px;
+      }
+
+      body.home-detail-page .detail-thumb-grid {
+        gap: 6px;
+      }
+
+      body.home-detail-page .detail-thumb {
+        border-radius: 12px;
+      }
+
+      body.home-detail-page .detail-heading-block h1,
+      body.home-detail-page .detail-section-head h2,
+      body.home-detail-page .detail-process-head h2,
+      body.home-detail-page .detail-trust-highlight h2,
+      body.home-detail-page .detail-referral-card h2,
+      body.home-detail-page .detail-referral-title {
+        font-size: clamp(1.25rem, 6.5vw, 1.6rem);
+      }
+
+      body.home-detail-page .detail-heading-block p,
+      body.home-detail-page .detail-process-head p,
+      body.home-detail-page .detail-referral-card p,
+      body.home-detail-page .detail-trust-highlight p,
+      body.home-detail-page .detail-review-text,
+      body.home-detail-page .detail-process-card p,
+      body.home-detail-page .detail-hero-desc {
+        font-size: 0.92rem;
+      }
+
+      body.home-detail-page .detail-price-box,
+      body.home-detail-page .detail-soft-panel,
+      body.home-detail-page .detail-referral-card,
+      body.home-detail-page .detail-process-panel,
+      body.home-detail-page .detail-trust-highlight,
+      body.home-detail-page .detail-review-card {
+        padding: 16px 14px;
+      }
+
+      body.home-detail-page .detail-price-box {
+        padding: 14px 12px;
+      }
+
+      body.home-detail-page .detail-price-value {
+        font-size: clamp(1.35rem, 7.5vw, 1.7rem);
+      }
+
+      body.home-detail-page .detail-price-note,
+      body.home-detail-page .detail-trend-pill {
+        font-size: 0.84rem;
+        line-height: 1.55;
+      }
+
+      body.home-detail-page .detail-action-grid {
+        grid-template-columns: 1fr;
+      }
+
+
+      body.home-detail-page .detail-btn-hotline,
+      body.home-detail-page .detail-btn-zalo,
+      body.home-detail-page .detail-btn-primary,
+      body.home-detail-page .detail-btn-contact {
+        width: 100%;
+        min-height: 50px;
+        gap: 7px;
+        font-size: 0.92rem;
+        white-space: normal;
+      }
+
+      body.home-detail-page .detail-feature-item,
+      body.home-detail-page .detail-referral-item,
+      body.home-detail-page .detail-process-card {
+        padding: 14px;
+      }
+
+      body.home-detail-page .detail-referral-visual {
+        min-height: 250px;
+      }
+
+      body.home-detail-page .detail-referral-overlay {
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+        padding: 18px 14px 14px;
+      }
+
+      body.home-detail-page .detail-referral-overlay h3 {
+        font-size: 1.05rem;
+      }
+
+    }
+  </style>
+}
+@section Scripts {
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+    const mainImage = document.getElementById('hero-main-image');
+    const mainTitle = document.getElementById('hero-main-title');
+    const mainDesc = document.getElementById('hero-main-desc');
+    const mainKicker = document.getElementById('hero-main-kicker');
+    const thumbs = document.querySelectorAll('.hero-thumb');
+
+    if (mainImage && mainTitle && mainDesc && mainKicker && thumbs.length) {
+    const setActiveThumb = (activeThumb) => {
+    thumbs.forEach((thumb) => thumb.classList.remove('active'));
+    activeThumb.classList.add('active');
+    };
+
+    thumbs.forEach((thumb) => {
+    thumb.addEventListener('click', () => {
+    const image = thumb.dataset.image;
+    const alt = thumb.dataset.alt;
+    const title = thumb.dataset.title;
+    const desc = thumb.dataset.desc;
+    const kicker = thumb.dataset.kicker;
+
+    if (image) mainImage.src = image;
+    if (alt) mainImage.alt = alt;
+    if (title) mainTitle.textContent = title;
+   if (desc) {
+    mainDesc.innerHTML = `
+        <span style="display:block; padding-right:180px;">
+            ${desc}
+        </span>
+        <span style="
+            position:absolute;
+            right:0;
+            bottom:0;
+            font-weight:bold;
+            margin-right:-250px;
+            color:#ffd700;
+            font-size:40px;
+            white-space:nowrap;
+        ">
+            @contactInfo.Phone
+        </span>
+    `;
+}
+    if (kicker) mainKicker.textContent = kicker;
+
+    setActiveThumb(thumb);
+    });
+    });
+    }
+
+    const relatedProductsSwiperElement = document.querySelector('.detail-related-products-swiper');
+    const prevBtn = document.querySelector('.materials-prev');
+    const nextBtn = document.querySelector('.materials-next');
+ 
+    if (relatedProductsSwiperElement && typeof Swiper !== 'undefined') {
+    const totalSlides = relatedProductsSwiperElement.querySelectorAll('.swiper-slide').length;
+    const shouldLoop = totalSlides > 4;
+ 
+    new Swiper(relatedProductsSwiperElement, {
+    speed: 900,
+    loop: shouldLoop,
+    slidesPerView: 1.15,
+    spaceBetween: 16,
+    grabCursor: true,
+    autoplay: {
+    delay: 2800,
+    disableOnInteraction: false,
+    pauseOnMouseEnter: true
+    },
+    navigation: prevBtn && nextBtn ? {
+    prevEl: prevBtn,
+    nextEl: nextBtn
+    } : undefined,
+    pagination: {
+    el: '.detail-related-pagination',
+    clickable: true
+    },
+    breakpoints: {
+    576: {
+    slidesPerView: 1.35,
+    spaceBetween: 16
+    },
+    768: {
+    slidesPerView: 2,
+    spaceBetween: 18
+    },
+    992: {
+    slidesPerView: 3,
+    spaceBetween: 20
+    },
+    1200: {
+    slidesPerView: 4,
+    spaceBetween: 20
+    }
+    }
+    });
+ 
+    relatedProductsSwiperElement.querySelectorAll('.materials-hover-image').forEach((imageElement) => {
+    const sequence = (imageElement.dataset.imageSequence || '')
+    .split('|')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+ 
+    if (sequence.length <= 1) {
+    return;
+    }
+ 
+    const defaultImage = imageElement.dataset.defaultImage || sequence[0];
+    let currentIndex = 0;
+    let intervalId = null;
+ 
+    const startHoverRotation = function () {
+    if (intervalId) {
+    return;
+    }
+ 
+    intervalId = window.setInterval(() => {
+    currentIndex = (currentIndex + 1) % sequence.length;
+    imageElement.src = sequence[currentIndex];
+    }, 900);
+    };
+ 
+    const stopHoverRotation = function () {
+    if (intervalId) {
+    window.clearInterval(intervalId);
+    intervalId = null;
+    }
+ 
+    currentIndex = 0;
+    imageElement.src = defaultImage;
+    };
+ 
+    imageElement.addEventListener('mouseenter', startHoverRotation);
+    imageElement.addEventListener('mouseleave', stopHoverRotation);
+    });
+    }
+    });
+  </script>
+}
+
+
+<main class=" detail-page-shell">
+  <section class="detail-section">
+    <div class="detail-shell">
+      <div class="detail-grid-hero">
+        <div class="detail-gallery-stack">
+          <div class="detail-hero-main">
+            <img id="hero-main-image" src="@primaryImage" alt="@primaryAlt" />
+            <div class="detail-hero-overlay">
+              <div class="detail-hero-overlay-inner">
+                <div>
+                  <p id="hero-main-kicker" class="detail-hero-kicker">@(Model.Category?.Name ?? "Sản phẩm nổi bật")</p>
+                  <h2 id="hero-main-title" class="detail-hero-title">@heroTitle</h2>
+                 
+              <p id="hero-main-desc" class="detail-hero-desc" style="position:relative;">
+
+                                <span style="display:block; padding-right:180px;">
+                                    @shortDescription
+                                </span>
+
+                                <span style="
+                                    position:absolute;
+                                    right:0;
+                                    bottom:0;
+                                    font-weight:bold;
+                                    color:#ffd700;
+                                    font-size:40px;
+                                    margin-right:-250px;
+                                    white-space:nowrap;
+                                ">
+                                    @contactInfo.Phone
+                                </span>
+
+                            </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-thumb-grid">
+            @if (galleryImages.Any())
+            {
+              @for (var i = 0; i < Math.Min(galleryImages.Count, 3); i++)
+              {
+                var image = galleryImages[i];
+                var imageUrl = NormalizeAssetUrl(image.ImageUrl);
+                var imageCaption = !string.IsNullOrWhiteSpace(image.Caption) ? image.Caption : $"Ảnh {i + 1}";
+                <button type="button" class="detail-thumb hero-thumb @(i == 0 ? "active" : "")" data-image="@imageUrl"
+                        data-alt="@imageCaption" data-title="@heroTitle" data-desc="@shortDescription"
+                        data-kicker="@(Model.Category?.Name ?? "Hình ảnh chi tiết")">
+                  <img src="@imageUrl" alt="@imageCaption" />
+                  <div class="detail-thumb-ring"></div>
+                  <div class="detail-thumb-caption">@imageCaption</div>
+                </button>
+              }
+            }
+            else
+            {
+              <button type="button" class="detail-thumb hero-thumb active" data-image="@coverImage" data-alt="@primaryAlt"
+                      data-title="@heroTitle" data-desc="@heroDescriptionPlain"
+                      data-kicker="@(Model.Category?.Name ?? "Hình ảnh chi tiết")">
+                <img src="@coverImage" alt="@primaryAlt" />
+                <div class="detail-thumb-ring"></div>
+                <div class="detail-thumb-caption">@primaryAlt</div>
+              </button>
+            }
+          </div>
+        </div>
+
+        <div class="detail-content-stack">
+          <div class="detail-service-badge">
+            <span class="material-symbols-outlined detail-new-icon-filled" style="font-size: 14px;">verified</span>
+            Dịch vụ cao cấp
+          </div>
+          <div class="detail-heading-block">
+            <h1>@heroTitle</h1>
+           
+          </div>
+          <div class="detail-price-box">
+            <div class="detail-price-box-inner">
+              <div>
+                <p class="detail-price-label">@priceLabel</p>
+                <div class="detail-price-row">
+                  <span class="detail-price-value">@formattedPrice</span>
+                  <span class="detail-price-note">@priceNote</span>
+                </div>
+              </div>
+              <div class="detail-trend-pill">
+                <span class="material-symbols-outlined" style="font-size: 16px;">@trendIcon</span>
+                @trendText
+              </div>
+            </div>
+          </div>
+          <div class="detail-feature-grid">
+            <div class="detail-feature-item">
+              <div class="detail-feature-icon"><span class="material-symbols-outlined detail-new-icon-filled"
+                                                       style="font-size: 18px;">check</span></div>
+                <span>Cân đo minh bạch</span>
+              </div>
+              <div class="detail-feature-item">
+                <div class="detail-feature-icon"><span class="material-symbols-outlined detail-new-icon-filled"
+                                                         style="font-size: 18px;">check</span></div>
+                  <span>Thanh toán ngay</span>
+                </div>
+                <div class="detail-feature-item">
+                  <div class="detail-feature-icon"><span class="material-symbols-outlined detail-new-icon-filled"
+                                                           style="font-size: 18px;">check</span></div>
+                    <span>Hỗ trợ tháo dỡ</span>
+                  </div>
+                  <div class="detail-feature-item">
+                    <div class="detail-feature-icon"><span class="material-symbols-outlined detail-new-icon-filled"
+                                                             style="font-size: 18px;">check</span></div>
+                      <span>Báo giá siêu tốc</span>
+                    </div>
+                  </div>
+                  <div class="detail-action-grid">
+                    <a class="detail-btn-hotline" href="@productDetailPhoneHref">
+                      <span class="material-symbols-outlined" style="font-size: 20px;">call</span>
+                      Gọi Hotline Ngay
+                    </a>
+                    <a class="detail-btn-zalo" href="@productDetailZaloHref" target="_blank" rel="noopener noreferrer">
+                      <span class="material-symbols-outlined" style="font-size: 20px;">chat</span>
+                      Nhắn Zalo Nhận Báo Giá
+                    </a>
+                  </div>
+                  <br />
+                  @if (!string.IsNullOrWhiteSpace(Model.Product.Description))
+                  {
+                    <div class="text-dark product-detail-rich-content">@Html.Raw(Model.Product.Description)</div>
+                  }
+                  else
+                  {
+                    <p class="text-dark">@shortDescription</p>
+                  }
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="detail-soft-section" id="materials-section">
+         <div class="detail-shell">
+              <div class="detail-soft-panel">
+                <div class="detail-amber-glow"></div>
+                <div class="detail-section-head-row">
+                  <div>
+                    <div class="detail-referral-badge">
+                      <span class="material-symbols-outlined detail-new-icon-filled" style="font-size: 16px;">inventory_2</span>
+                      Danh mục thu mua
+                    </div>
+                    <h2 class="detail-referral-title">Phế liệu khác chúng tôi thu mua</h2>
+                  </div>
+                  <div class="detail-carousel-controls">
+                    <button type="button" class="detail-carousel-btn materials-prev" aria-label="Xem card trước">
+                      <span class="material-symbols-outlined" style="font-size: 22px;">chevron_left</span>
+                    </button>
+                    <button type="button" class="detail-carousel-btn materials-next" aria-label="Xem card tiếp theo">
+                      <span class="material-symbols-outlined" style="font-size: 22px;">chevron_right</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="detail-carousel-wrap detail-related-carousel-wrap">
+                  @await Component.InvokeAsync("RelatedProductsCarousel", new
+                  {
+                    count = 8,
+                    excludeIds = new[] { Model.Product.Id
+          } })
+              </div>
+            </div>
+          </section>
+
+
+                                  <section class="detail-section">
+           <div class="detail-shell">
+              <div class="detail-two-col">
+                <div class="detail-referral-card">
+                  <div class="detail-referral-badge">
+                    <span class="material-symbols-outlined detail-new-icon-filled" style="font-size: 16px;">handshake</span>
+                      Giới thiệu nhận thưởng
+                      </div>
+                    <h2>Giới thiệu khách bán phế liệu, nhận <span>hoa hồng cao</span></h2>
+                    <p>Bạn chỉ cần gửi đầu mối khách hàng, VIET RECYCLING sẽ báo giá, điều xe và xử lý toàn bộ quy trình. Khi
+                    chốt đơn thành công, hoa hồng được thanh toán nhanh và minh bạch.</p>
+                      <div class="detail-referral-grid">
+                      <div class="detail-referral-item">
+                        <div class="detail-referral-item-inner">
+                          <span class="material-symbols-outlined detail-new-icon-filled"
+                                  style="font-size: 20px; color: #d97706; margin-top: 2px;">payments</span>
+                            <div>
+                            <h3>Hoa hồng hấp dẫn</h3>
+                              <p>Mức thưởng tốt theo từng đơn thực tế.</p>
+                              </div>
+                            </div>
+                          </div>
+                        <div class="detail-referral-item">
+                        <div class="detail-referral-item-inner">
+                          <span class="material-symbols-outlined detail-new-icon-filled"
+                                  style="font-size: 20px; color: #047857; margin-top: 2px;">local_shipping</span>
+                            <div>
+                            <h3>Xử lý trọn gói</h3>
+                              <p>Khảo sát, báo giá và thu mua tận nơi.</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      <div class="detail-referral-footer">
+                      <div class="detail-referral-pill">
+                        <span class="material-symbols-outlined detail-new-icon-filled"
+                                style="font-size: 18px;">verified_user</span>
+                          Gửi đầu mối → chốt đơn → nhận hoa hồng
+                          </div>
+                        <div class="detail-referral-note">Đối soát rõ ràng từng đơn</div>
+                        </div>
+                      </div>
+
+                                          <div class="detail-referral-visual">
+                    <img
+                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuAaC2tJZGFEKbEmLbPEh2GSUOPTd_-Zt_rtQ01fV7tLMHISf79zadHnNzgnVpmNPdGPr3g_fZDosVNlq4NnY37Ci5sODVNY5q2lGtZFCch6oDBEcmmuYHDOviw3lSmnyTSNUXDS4w1OjKYa9LJQiPoqoCXSlmNkvnECYMx0Lyu7r5fN0X8cpRXWqAUHkwcvoSmlctDCrJS-FuQa87ZwGZBXmIo_xdymJfTADwd_BiK-9SgnwL_1U45h44u35ZWRCvgL_aTPss5EPw"
+                      alt="Giới thiệu khách bán phế liệu" />
+                      <div class="detail-referral-overlay">
+                      <p>Chương trình cộng tác</p>
+                        <h3>Giới thiệu càng nhiều, thu nhập càng tốt</h3>
+                        <p>Phù hợp cho người có mối quan hệ với nhà xưởng, kho bãi, công trình hoặc cơ sở sản xuất.</p>
+                        <div class="detail-referral-tags">
+                        <span>Hoa hồng cao</span>
+                          <span>Thanh toán nhanh</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                                    @await Component.InvokeAsync("RecentNewsSectionComponent")
+
+                                    <section class="detail-process-section">
+              <div class="detail-shell">
+                <div class="detail-process-panel">
+                  <div class="detail-process-head">
+                    <div class="detail-pill justify-content-center mx-auto">
+                      <span class="material-symbols-outlined detail-new-icon-filled" style="font-size: 16px;">hub</span>
+                        Quy trình làm việc
+                        </div>
+                      <h2>Quy trình chuyên nghiệp 4 bước</h2>
+                      <p>Nhanh - rõ ràng - minh bạch ở từng bước xử lý, từ lúc tiếp nhận thông tin đến khi thanh toán hoàn tất.
+                      </p>
+                      </div>
+                    <div class="detail-process-grid-wrap">
+                    <div class="detail-process-line"></div>
+                      <div class="detail-process-grid">
+                      <article class="detail-process-card">
+                        <div class="detail-process-top">
+                          <div class="detail-process-icon"><span class="material-symbols-outlined detail-new-icon-filled"
+                                                                   style="font-size: 26px;">call</span></div>
+                              <div class="detail-process-number">01</div>
+                              </div>
+                            <div class="detail-process-step-label">Bước mở đầu</div>
+                            <h4>Tiếp nhận thông tin</h4>
+                            <p>Khách hàng chỉ cần gửi hình ảnh qua Zalo hoặc gọi Hotline, đội ngũ sẽ phản hồi cực nhanh để nắm nhu
+                            cầu ban đầu.</p>
+                              </article>
+                            <article class="detail-process-card">
+                            <div class="detail-process-top">
+                              <div class="detail-process-icon"><span class="material-symbols-outlined detail-new-icon-filled"
+                                                                       style="font-size: 26px;">search</span></div>
+                                  <div class="detail-process-number">02</div>
+                                  </div>
+                                <div class="detail-process-step-label">Bước thẩm định</div>
+                                <h4>Khảo sát & Báo giá</h4>
+                                <p>Chuyên viên đến tận nơi để xem thực tế, phân loại rõ ràng và chốt giá minh bạch ngay tại chỗ để khách
+                                dễ quyết định.</p>
+                                  </article>
+                                <article class="detail-process-card">
+                                <div class="detail-process-top">
+                                  <div class="detail-process-icon"><span class="material-symbols-outlined detail-new-icon-filled"
+                                                                           style="font-size: 26px;">local_shipping</span></div>
+                                      <div class="detail-process-number">03</div>
+                                      </div>
+                                    <div class="detail-process-step-label">Bước xử lý</div>
+                                    <h4>Vận chuyển</h4>
+                                    <p>Đội xe chuyên dụng và nhân sự bốc xếp triển khai nhanh, gọn, sạch, hạn chế ảnh hưởng đến hoạt động
+                                    của kho xưởng.</p>
+                                      </article>
+                                    <article class="detail-process-card">
+                                    <div class="detail-process-top">
+                                      <div class="detail-process-icon"><span class="material-symbols-outlined detail-new-icon-filled"
+                                                                               style="font-size: 26px;">payments</span></div>
+                                          <div class="detail-process-number">04</div>
+                                          </div>
+                                        <div class="detail-process-step-label">Bước hoàn tất</div>
+                                        <h4>Thanh toán</h4>
+                                        <p>Thanh toán tiền mặt hoặc chuyển khoản ngay sau khi hoàn tất cân đo, bảo đảm đủ 100% và rõ ràng chứng
+                                        từ.</p>
+                                          </article>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </section>
+
+                                @await Component.InvokeAsync("ScrapPurchaseServicesSectionComponent")
+ 
+                                                    <section class="detail-trust-section">
+                            <div class="detail-shell">
+                                <div class="detail-trust-grid">
+                                  <div class="detail-trust-highlight">
+                                    <div class="detail-trust-highlight-inner">
+                                      <div class="detail-trust-badge">
+                                        <span class="material-symbols-outlined detail-new-icon-filled"
+                                                style="font-size: 16px;">workspace_premium</span>
+                                          Đối tác đồng hành
+                                          </div>
+                                        <h2>Được hàng ngàn đối tác tin tưởng</h2>
+                                        <p>Con số nói lên tất cả về sự tận tâm và chuyên nghiệp của Viet Recycling trong suốt thập kỷ qua.</p>
+                                        <div class="detail-trust-stats">
+                                        <div class="detail-trust-stat">
+                                          <strong>500+</strong>
+                                            <span>Khách hàng DN</span>
+                                            </div>
+                                          <div class="detail-trust-stat">
+                                          <strong>10k+</strong>
+                                            <span>Tấn phế liệu/năm</span>
+                                            </div>
+                                          </div>
+                                        <div class="detail-trust-tags">
+                                        <div>15+<br />Năm kinh nghiệm</div>
+                                          <div>24/7<br />Hỗ trợ phản hồi</div>
+                                          <div>Toàn miền Nam<br />Thu mua tận nơi</div>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                                          <div class="detail-review-list">
+                                    <article class="detail-review-card">
+                                      <div class="detail-review-top">
+                                        <div class="detail-review-user">
+                                          <div class="detail-review-avatar">
+                                            <img
+                                              src="https://lh3.googleusercontent.com/aida-public/AB6AXuBpkCzoEOugVHLqWPLmvJAfNLKP6bWC4DgvgKDEDdZoP2IT-_TxxYYgulnC_-wqjx-O2KaOjXHlukw3Bu6-wH8snq2jx1UNVGaetB0NIYyMZciaYvGlMioVR-YmYZHxEZ74-ZSKdz-7vM_eXEKtCptNEjn_QnIqK3-Rhdhivd22ZN4oge9gIRjmdaQ_dJ3fpZHGUObmGaOfXNQKape01KZnw9Yqsmcd-0-2A-CITpVfoUCQSfSHBQG2w2Sewa303P4t1dnWLMipCQ"
+                                              alt="Anh Hữu Hào" />
+                                              </div>
+                                            <div>
+                                            <h5>Anh Hữu Hào</h5>
+                                              <p>Giám đốc SX, Nội thất Gỗ Xinh</p>
+                                              </div>
+                                            </div>
+                                          <div class="detail-review-quote-icon">
+                                          <span class="material-symbols-outlined detail-new-icon-filled">format_quote</span>
+                                            </div>
+                                          </div>
+                                        <p class="detail-review-text">“Dịch vụ thu mua rất chuyên nghiệp, cân đo chuẩn xác và thanh toán ngay sau
+                                        khi bốc hàng xong. Tôi đã làm việc cùng Viet Recycling được 3 năm và rất hài lòng.”</p>
+                                          <div class="detail-review-footer">
+                                          <div class="detail-stars">
+                                            <span class="material-symbols-outlined detail-new-icon-filled" style="font-size: 18px;">star</span>
+                                              <span class="material-symbols-outlined detail-new-icon-filled" style="font-size: 18px;">star</span>
+                                              <span class="material-symbols-outlined detail-new-icon-filled" style="font-size: 18px;">star</span>
+                                              <span class="material-symbols-outlined detail-new-icon-filled" style="font-size: 18px;">star</span>
+                                              <span class="material-symbols-outlined detail-new-icon-filled" style="font-size: 18px;">star</span>
+                                              </div>
+                                            <span class="detail-review-score">Đánh giá 5.0</span>
+                                            </div>
+                                          </article>
+
+                                                              <article class="detail-review-card">
+                                        <div class="detail-review-top">
+                                          <div class="detail-review-user">
+                                            <div class="detail-review-avatar">
+                                              <img
+                                                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDAbvkD9_Nrg2V9mkpdd01vU_neQ91qzFMrWGinPWgQRYTMa50opeiWjYTXgtwRfu6k4Yoz1pWyByGmvt0ktmE9MQETmDrpwLQf_5iBk59nudHwAP49RB8CdO7l4dANRhySLdVrxMW0dOa-qQ0JfQV6CCSQAuAbPVTrA6C0AOZF-OwRRE9ENm55zPSoK-1t2jA7OCgJgZ14jrVhgtfu5xWpLgy-1TD5qg9flZHME1Umu8u_SpnWpkPtGiGo9w1RO0yBtVSu4hr-BA"
+                                                alt="Chị Mai Lan" />
+                                                </div>
+                                              <div>
+                                              <h5>Chị Hoàng Doanh</h5>
+                                                <p>Chủ kho phế liệu, Bình Dương</p>
+                                                </div>
+                                              </div>
+                                            <div class="detail-review-quote-icon">
+                                            <span class="material-symbols-outlined detail-new-icon-filled">format_quote</span>
+                                              </div>
+                                            </div>
+                                          <p class="detail-review-text">“Giá đồng đỏ ở đây luôn thuộc top cao nhất thị trường. Nhân viên nhiệt tình,
+                                          hỗ trợ tháo dỡ dây cáp rất nhanh gọn, sạch sẽ kho bãi.”</p>
+                                            <div class="detail-review-footer">
+                                            <div class="detail-stars">
+                                              <span class="material-symbols-outlined detail-new-icon-filled" style="font-size: 18px;">star</span>
+                                                <span class="material-symbols-outlined detail-new-icon-filled" style="font-size: 18px;">star</span>
+                                                <span class="material-symbols-outlined detail-new-icon-filled" style="font-size: 18px;">star</span>
+                                                <span class="material-symbols-outlined detail-new-icon-filled" style="font-size: 18px;">star</span>
+                                                <span class="material-symbols-outlined detail-new-icon-filled" style="font-size: 18px;">star</span>
+                                                </div>
+                                              <span class="detail-review-score">Đánh giá 5.0</span>
+                                              </div>
+                                            </article>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </section>
+                                  </main>

@@ -1,0 +1,167 @@
+@inject WebThuMuaPheLieu.helpper.IContactInfoHelper ContactInfoHelper
+@model WebThuMuaPheLieu.ViewModels.ScrapPurchaseServicesSectionComponentViewModel
+@using System.Net
+@using System.Text.RegularExpressions
+@{
+    var serviceBlogPosts = Model?.Posts?.ToList() ?? new List<WebThuMuaPheLieu.Models.BlogCardViewModel>();
+    var contactInfo = await ContactInfoHelper.GetContactInfoAsync();
+}
+
+<style>
+    #services .service-card-media {
+        position: relative;
+        overflow: hidden;
+    }
+
+    #services .materials-phone-overlay {
+        position: absolute;
+        right: 10px;
+        bottom: 12px;
+        z-index: 2;
+        color: #ffd54a;
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+        pointer-events: none;
+    }
+</style>
+
+@functions {
+    string NormalizeBlogImagePath(string? coverImage)
+    {
+        if (string.IsNullOrWhiteSpace(coverImage))
+        {
+            return "/assets/images/blogs/service/default.jpg";
+        }
+
+        var normalized = coverImage.Replace("\\", "/").Trim();
+
+        if (normalized.StartsWith("~/"))
+        {
+            return $"/{normalized[2..]}";
+        }
+
+        if (normalized.StartsWith("http://") || normalized.StartsWith("https://") || normalized.StartsWith("/"))
+        {
+            return normalized;
+        }
+
+        return $"/{normalized.TrimStart('/')}";
+    }
+
+    string BuildBlogSummary(WebThuMuaPheLieu.Models.BlogCardViewModel post)
+    {
+        var summary = post.Summary;
+
+        if (string.IsNullOrWhiteSpace(summary))
+        {
+            return "Nội dung bài viết đang được cập nhật.";
+        }
+
+        summary = WebUtility.HtmlDecode(summary);
+        summary = Regex.Replace(summary, "<.*?>", string.Empty);
+        summary = Regex.Replace(summary, @"\s+", " ").Trim();
+
+        if (string.IsNullOrWhiteSpace(summary))
+        {
+            return "Nội dung bài viết đang được cập nhật.";
+        }
+
+        return summary.Length > 160 ? $"{summary[..157]}..." : summary;
+    }
+}
+
+<section id="services" class="services section-bg py-5 home-card-section">
+    <div class="container-fluid home-section-shell" data-aos="fade-up">
+        <div class="section-header">
+            <h2>Dịch vụ thu mua phế liệu</h2>
+            <p>Dịch vụ thu mua được trình bày theo hướng trọn gói để khách hàng dễ hình dung ngay từ đầu: chúng tôi hỗ
+                trợ từ khâu tiếp nhận thông tin, khảo sát tận nơi, phân loại hàng hóa, báo giá minh bạch cho đến bốc
+                xếp, vận chuyển và thanh toán, qua đó giúp khách cá nhân lẫn doanh nghiệp tiết kiệm thời gian, giảm công
+                sức xử lý và tối ưu giá trị khi thanh lý phế liệu.</p>
+            </div>
+
+            @if (serviceBlogPosts.Any())
+            {
+                <div class="home-cards-grid">
+                    @for (var index = 0; index < serviceBlogPosts.Count; index++)
+                    {
+                        var post = serviceBlogPosts[index];
+                        var animationDelay = 100 + (index * 100);
+
+                        <div data-aos="fade-up" data-aos-delay="@animationDelay">
+                            <div class="service-card-v2">
+                                <a asp-route="blog-detail-seo" asp-route-slug="@(!string.IsNullOrWhiteSpace(post.Slug) ? post.Slug : post.Id.ToString())" class="service-card-media"
+                                       aria-label="@(post.Title ?? "Xem chi tiết dịch vụ thu mua phế liệu")">
+                                     <img src="@NormalizeBlogImagePath(post.CoverImage)"
+                                          alt="@(post.Title ?? "Dịch vụ thu mua phế liệu")" class="img-fluid w-100 materials-hover-image js-service-card-image"
+                                          data-image-sequence="@string.Join("|", post.ImageSequence ?? new List<string>())"
+                                          data-default-image="@NormalizeBlogImagePath(post.CoverImage)"
+                                          loading="lazy">
+                                    <span class="materials-phone-overlay">@contactInfo.Phone</span>
+                                     <span class="service-badge"><i class="bi bi-briefcase-fill"></i> Dịch vụ</span>
+                                 </a>
+                                <div class="service-card-body">
+                                    <h3><a asp-route="blog-detail-seo" asp-route-slug="@(!string.IsNullOrWhiteSpace(post.Slug) ? post.Slug : post.Id.ToString())">@(post.Title ?? "Dịch vụ thu mua phế liệu")</a></h3>
+                                    <p>@BuildBlogSummary(post)</p>
+                                    <a asp-route="blog-detail-seo" asp-route-slug="@(!string.IsNullOrWhiteSpace(post.Slug) ? post.Slug : post.Id.ToString())" class="readmore">Xem chi tiết <i class="bi bi-arrow-right"></i></a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="col-12 text-center py-4">
+                    <p class="text-muted mb-0">Đang cập nhật nội dung dịch vụ...</p>
+                </div>
+            }
+        </div>
+    </section>
+
+<script>
+    (() => {
+        document.querySelectorAll('#services .js-service-card-image').forEach((imageElement) => {
+            const sequence = (imageElement.dataset.imageSequence || '')
+                .split('|')
+                .map((item) => item.trim())
+                .filter((item) => item.length > 0);
+
+            if (sequence.length <= 1 || imageElement.dataset.rotationInitialized === 'true') {
+                return;
+            }
+
+            const defaultImage = imageElement.dataset.defaultImage || sequence[0];
+            let currentIndex = 0;
+            let intervalId = null;
+
+            const startHoverRotation = () => {
+                if (intervalId !== null) {
+                    return;
+                }
+
+                intervalId = window.setInterval(() => {
+                    currentIndex = (currentIndex + 1) % sequence.length;
+                    imageElement.src = sequence[currentIndex];
+                }, 850);
+            };
+
+            const stopHoverRotation = () => {
+                if (intervalId !== null) {
+                    window.clearInterval(intervalId);
+                    intervalId = null;
+                }
+
+                currentIndex = 0;
+                imageElement.src = defaultImage;
+            };
+
+            imageElement.dataset.rotationInitialized = 'true';
+            const mediaElement = imageElement.closest('.service-card-media');
+            mediaElement?.addEventListener('mouseenter', startHoverRotation);
+            mediaElement?.addEventListener('mouseleave', stopHoverRotation);
+        });
+    })();
+</script>

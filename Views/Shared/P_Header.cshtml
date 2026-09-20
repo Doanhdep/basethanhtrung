@@ -1,0 +1,112 @@
+﻿@using WebThuMuaPheLieu.helpper
+@inject IContactInfoHelper ContactInfoHelper
+@inject ILayoutDataHelper LayoutDataHelper
+@{
+    var contact = await ContactInfoHelper.GetContactInfoAsync();
+    var headerPhone = !string.IsNullOrWhiteSpace(contact.Phone) ? contact.Phone : "0974640626";
+    var headerEmail = !string.IsNullOrWhiteSpace(contact.Gmail) ? contact.Gmail : "info@phelieuhoangdoanh.com";
+    var headerLocation = string.IsNullOrWhiteSpace(contact.PurchaseAreas) ? (string.IsNullOrWhiteSpace(contact.Address) ? "Phục vụ TP.HCM, Bình Dương, Đồng Nai" : contact.Address) : contact.PurchaseAreas;
+    var facebookLink = string.IsNullOrWhiteSpace(contact.Facebook) ? "#" : (contact.Facebook.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || contact.Facebook.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ? contact.Facebook : $"https://{contact.Facebook.TrimStart('/')}");
+    var zaloLink = string.IsNullOrWhiteSpace(contact.Zalo) ? "#" : (contact.Zalo.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || contact.Zalo.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ? contact.Zalo : $"https://zalo.me/{contact.Zalo.TrimStart('/').Replace("zalo.me/", string.Empty, StringComparison.OrdinalIgnoreCase)}");
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+    var isHomePage = string.Equals(currentController, "Home", StringComparison.OrdinalIgnoreCase)
+        && string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase);
+    var isAboutPage = string.Equals(currentController, "Home", StringComparison.OrdinalIgnoreCase)
+        && string.Equals(currentAction, "About", StringComparison.OrdinalIgnoreCase);
+    var isProductPage = string.Equals(currentController, "Product", StringComparison.OrdinalIgnoreCase)
+        && string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase);
+    var isPricingPage = string.Equals(currentController, "Pricing", StringComparison.OrdinalIgnoreCase)
+        && string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase);
+    var isBlogPage = string.Equals(currentController, "Blog", StringComparison.OrdinalIgnoreCase)
+        && (string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(currentAction, "Detail", StringComparison.OrdinalIgnoreCase));
+    var isContactPage = string.Equals(currentController, "Contact", StringComparison.OrdinalIgnoreCase)
+        && string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase);
+
+    var serviceMenuItems = await LayoutDataHelper.GetServiceMenuItemsAsync();
+    var headerLogoUrl = ImagePathHelper.ResolveVariantImage("/assets/img/logo2.png", SiteImageVariant.Original, "/assets/img/logo2.png");
+}
+
+<header id="header" class="header">
+    <div class="container-fluid home-wide-shell">
+        <div class="header-top-content">
+            <div class="header-top-left">
+                <div class="header-top-item">
+                    <i class="bi bi-telephone-fill"></i>
+                    <a href="tel:@(new string(headerPhone.Where(char.IsDigit).ToArray()))">Hotline: @headerPhone</a>
+                </div>
+                <div class="header-top-item">
+                    <i class="bi bi-envelope-fill"></i>
+                    <a href="mailto:@headerEmail">@headerEmail</a>
+                </div>
+                <div class="header-top-item">
+                    <i class="bi bi-pin-map-fill"></i>
+                    <span>@headerLocation</span>
+                </div>
+                <div class="header-top-item">
+                    <i class="bi bi-flower1"></i>
+                    <span class="tag-location">
+                        Giới thiệu ngay – Hoa hồng cao 🔥
+                    </span>
+                </div>
+            </div>
+            <div class="header-social">
+                <a href="@facebookLink" title="Facebook" target="_blank" rel="noopener noreferrer"><i class="bi bi-facebook"></i></a>
+                <a href="@zaloLink" title="Zalo" target="_blank" rel="noopener noreferrer"><i class="bi bi-chat-dots"></i></a>
+                <a href="@zaloLink" title="YouTube" target="_blank" rel="noopener noreferrer"><i class="bi bi-youtube"></i></a>
+                <a href="@zaloLink" title="Instagram" target="_blank" rel="noopener noreferrer"><i class="bi bi-instagram"></i></a>
+            </div>
+        </div>
+
+        <div class="header-main-bar">
+            <a asp-controller="Home" asp-action="Index" class="logo d-flex align-items-center" aria-label="Trang chủ">
+                <img src="@headerLogoUrl"
+                     alt="Logo Phế Liệu Thành Trung"
+                     width="180"
+                     height="60"
+                     decoding="async"
+                     fetchpriority="high">
+                </a>
+
+                <div class="header-main-actions">
+                    <i class="mobile-nav-toggle mobile-nav-show bi bi-list"></i>
+                    <i class="mobile-nav-toggle mobile-nav-hide d-none bi bi-x"></i>
+                    <nav id="navbar" class="navbar me-2">
+                        <ul>
+                            <li><a asp-controller="Home" asp-action="Index" class="@(isHomePage ? "active" : null)">Trang
+                                chủ</a></li>
+                                <li><a asp-controller="Home" asp-action="About" class="@(isAboutPage ? "active" : null)">Giới thiệu</a></li>
+                                <li class="dropdown">
+                                    <a asp-controller="Home" asp-action="Index" asp-fragment="services">Dịch vụ <i class="bi bi-chevron-down dropdown-indicator"></i></a>
+                                    <ul>
+                                        @foreach (var service in serviceMenuItems)
+                                        {
+                                            <li>
+                                                <a asp-route="blog-detail-seo" asp-route-slug="@(!string.IsNullOrWhiteSpace(service.Slug) ? service.Slug : service.Id.ToString())">@service.Title</a>
+                                            </li>
+                                        }
+                                    </ul>
+                                </li>
+                                <li><a asp-controller="Product" asp-action="Index"
+                                           class="@(isProductPage ? "active" : null)">Mặt hàng</a></li>
+
+
+                                    <li><a asp-controller="Pricing" asp-action="Index"
+                                           class="@(isPricingPage ? "active" : null)">Bảng giá</a></li>
+
+                                    <li><a asp-controller="Blog" asp-action="Index" class="@(isBlogPage ? "active" : null)">Tin tức</a></li>
+
+                                    <li><a asp-controller="Contact" asp-action="Index" class="@(isContactPage ? "active" : null)">Liên hệ</a></li>
+                                </ul>
+                            </nav>
+                            <a asp-controller="Contact" asp-action="Index" class="header-cta d-none d-lg-inline-flex">
+                                <i class="bi bi-lightning-charge-fill"></i>
+                                Báo giá ngay
+
+                            </a>
+
+                        </div>
+                    </div>
+                </div>
+            </header>

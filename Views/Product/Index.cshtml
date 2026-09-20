@@ -1,0 +1,777 @@
+@inject WebThuMuaPheLieu.helpper.IContactInfoHelper ContactInfoHelper
+@inject WebThuMuaPheLieu.Services.IStructuredDataService StructuredDataService
+@model WebThuMuaPheLieu.Models.ProductIndexViewModel
+
+@{
+    Layout = "_HomeLayout";
+    ViewData["Title"] = "Mặt hàng";
+    ViewData["NeedsAos"] = true;
+    ViewData["NeedsBungee"] = true;
+    ViewData["Description"] = "Danh sách mặt hàng phế liệu thu mua giá cao gồm sắt, đồng, nhôm, inox, giấy carton, nhựa và máy móc cũ.";
+    if (string.IsNullOrWhiteSpace(ViewData["Canonical"]?.ToString()))
+    {
+        ViewData["Canonical"] = $"{Context.Request.Scheme}://{Context.Request.Host}{Context.Request.Path}";
+    }
+    ViewData["OgType"] = "website";
+    var structuredDataJson = StructuredDataService.SerializeSchemas(StructuredDataService.BuildProductListSchemas(Context));
+    var contactInfo = await ContactInfoHelper.GetContactInfoAsync();
+    var productCategoryOptions = Model.CategoryNames
+        .Where(categoryName => !string.IsNullOrWhiteSpace(categoryName))
+        .Select(categoryName => new
+        {
+            Name = categoryName.Trim(),
+            Slug = ToCategorySlug(categoryName),
+            IsSelected = string.Equals(categoryName.Trim(), Model.SelectedCategory, StringComparison.OrdinalIgnoreCase)
+        })
+        .OrderBy(item => item.Name)
+        .ToList();
+    var selectedCategoryLabel = productCategoryOptions.FirstOrDefault(item => item.IsSelected)?.Name ?? "Tất cả danh mục";
+}
+
+@section Head {
+    <partial name="_StructuredData" model="structuredDataJson" />
+}
+
+<section id="materials" class="services home-card-section">
+    <div class="container-fluid home-section-shell" data-aos="fade-up">
+        <h1 class="visually-hidden">Danh sách mặt hàng phế liệu thu mua</h1>
+        <div class="materials-header-row">
+            <div class="section-header mb-0 materials-section-header">
+                <div class="materials-title-row">
+                    <h2 class="materials-title mb-0">Thu mua tất cả các loại phế liệu</h2>
+
+                    @if (productCategoryOptions.Any())
+                    {
+                        <div class="materials-category-shortcut dropdown">
+                            <a href="#" id="materialsCategoryToggle" class="materials-category-toggle" aria-expanded="false" aria-haspopup="true">
+                                <span id="materialsCategoryLabel">@selectedCategoryLabel</span>
+                                <i class="bi bi-chevron-down dropdown-indicator"></i>
+                            </a>
+                            <ul id="materialsCategoryMenu" class="materials-category-menu">
+                                <li>
+                                    <a href="#" class="materials-category-option @(string.IsNullOrWhiteSpace(Model.SelectedCategory) ? "active" : string.Empty)" data-category-value="">Tất cả danh mục</a>
+                                </li>
+                                @foreach (var categoryOption in productCategoryOptions)
+                                {
+                                    <li>
+                                        <a href="#" class="materials-category-option @(categoryOption.IsSelected ? "active" : string.Empty)" data-category-value="@categoryOption.Name">@categoryOption.Name</a>
+                                    </li>
+                                }
+                            </ul>
+                            <input type="hidden" id="materialsCategorySelect" value="@Model.SelectedCategory" />
+                        </div>
+                    }
+                </div>
+
+                <p class="text-dart">
+                    Danh mục thu mua được trình bày rõ ràng để khách hàng dễ hình dung ngay từ đầu: chúng tôi tiếp nhận
+                    nhiều loại phế liệu từ dân dụng, văn phòng, cửa hàng nhỏ lẻ cho đến hàng công nghiệp số lượng lớn
+                    tại kho xưởng, công trình và doanh nghiệp, đồng thời hỗ trợ khảo sát tận nơi, tư vấn phân loại,
+                    báo giá minh bạch và thu gom nhanh gọn trong suốt quá trình thanh lý.
+                </p>
+            </div>
+        </div>
+
+        <style>
+                    #materials .materials-header-row {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 10px;
+                        margin-bottom: 20px;
+                    }
+
+                    #materials .materials-section-header {
+                        width: 100%;
+                    }
+
+                    #materials .materials-title-row {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 16px;
+                        width: 100%;
+                    }
+
+                    #materials .materials-title {
+                        margin: 0;
+                        flex: 1 1 auto;
+                        text-align: center;
+                        transform: translateX(140px);
+                    }
+
+                    #materials .materials-category-shortcut {
+                        flex: 0 0 260px;
+                        max-width: 260px;
+                        margin-left: auto;
+                        position: relative;
+                    }
+
+                    #materials .materials-category-toggle {
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        width: 100%;
+                        min-height: 44px;
+                        border-radius: 999px;
+                        border: 1px solid rgba(25, 135, 84, 0.18);
+                        background: linear-gradient(135deg, #ffffff 0%, #f7fbf8 100%);
+                        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+                        padding: 10px 42px 10px 16px;
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: #1f2937;
+                        appearance: none;
+                        -webkit-appearance: none;
+                        -moz-appearance: none;
+                        cursor: pointer;
+                        text-decoration: none;
+                        transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+                        color: #1f2937;
+                    }
+
+                    #materials .materials-category-toggle:focus,
+                    #materials .materials-category-toggle:focus-visible {
+                        outline: none;
+                        border-color: rgba(25, 135, 84, 0.42);
+                        box-shadow: 0 0 0 4px rgba(25, 135, 84, 0.12), 0 10px 24px rgba(15, 23, 42, 0.08);
+                    }
+
+                    #materials .materials-category-toggle:hover {
+                        transform: translateY(-1px);
+                        color: #1f2937;
+                    }
+
+                    #materials .materials-category-toggle .dropdown-indicator {
+                        font-size: 14px;
+                        color: #198754;
+                        transition: transform 0.25s ease;
+                    }
+
+                    #materials .materials-category-shortcut.is-open .materials-category-toggle .dropdown-indicator {
+                        transform: rotate(180deg);
+                    }
+
+                    #materials .materials-category-menu {
+                        list-style: none;
+                        margin: 10px 0 0;
+                        padding: 8px 0;
+                        position: absolute;
+                        top: calc(100% + 2px);
+                        right: 0;
+                        min-width: 280px;
+                        max-width: 320px;
+                        background: #16202d;
+                        border-radius: 18px;
+                        box-shadow: 0 22px 48px rgba(15, 23, 42, 0.22);
+                        z-index: 25;
+                        opacity: 0;
+                        visibility: hidden;
+                        transform: translateY(8px);
+                        transition: opacity 0.22s ease, transform 0.22s ease, visibility 0.22s ease;
+                    }
+
+                    #materials .materials-category-shortcut.is-open .materials-category-menu {
+                        opacity: 1;
+                        visibility: visible;
+                        transform: translateY(0);
+                    }
+
+                    #materials .materials-category-menu li {
+                        margin: 0;
+                        padding: 0;
+                    }
+
+                    #materials .materials-category-option {
+                        display: block;
+                        padding: 11px 18px;
+                        color: rgba(255, 255, 255, 0.88);
+                        font-size: 15px;
+                        font-weight: 600;
+                        line-height: 1.4;
+                        text-decoration: none;
+                        transition: background-color 0.2s ease, color 0.2s ease;
+                    }
+
+                    #materials .materials-category-option:hover,
+                    #materials .materials-category-option.active {
+                        background: rgba(37, 99, 235, 0.95);
+                        color: #ffffff;
+                    }
+
+                    #materials .materials-category-menu li:first-child .materials-category-option {
+                        border-top-left-radius: 12px;
+                        border-top-right-radius: 12px;
+                    }
+
+                    #materials .materials-category-menu li:last-child .materials-category-option {
+                        border-bottom-left-radius: 12px;
+                        border-bottom-right-radius: 12px;
+                    }
+
+                    #materials .materials-grid-swiper {
+                        overflow: hidden;
+                        padding: 4px 2px 34px;
+                    }
+
+                    #materials .materials-grid-swiper .swiper-wrapper {
+                        align-items: stretch;
+                    }
+
+                    #materials .materials-grid-swiper .swiper-slide {
+                        height: auto;
+                        display: flex;
+                    }
+
+                    #materials .materials-grid-swiper .materials-card-v2 {
+                        width: 100%;
+                        height: 100%;
+                    }
+
+                     #materials .materials-grid-swiper .materials-card-media {
+                         aspect-ratio: 16 / 10;
+                         height: auto;
+                         min-height: 220px;
+                         position: relative;
+                         overflow: hidden;
+                     }
+
+                     #materials .materials-phone-overlay {
+                         position: absolute;
+                         right: 30px;
+                         bottom: 12px;
+                         z-index: 2;
+                         color: #ffd54a;
+                         font-size: 20px;
+                         font-weight: 800;
+                         letter-spacing: 0.04em;
+                         text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+                         pointer-events: none;
+                     }
+
+                    #materials .materials-products-pagination {
+                        bottom: 0 !important;
+                    }
+
+                    #materials .materials-products-pagination .swiper-pagination-bullet {
+                        width: 10px;
+                        height: 10px;
+                        background: rgba(15, 23, 42, 0.22);
+                        opacity: 1;
+                    }
+
+                    #materials .materials-products-pagination .swiper-pagination-bullet-active {
+                        background: #198754;
+                    }
+
+                    #materials .materials-card-body .readmore {
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 8px;
+                        color: rgba(15, 23, 42, 0.62);
+                        opacity: 0.72;
+                        transition: color 0.3s ease, opacity 0.3s ease, gap 0.3s ease, text-shadow 0.3s ease;
+                    }
+
+                    #materials .materials-card-body .readmore i {
+                        font-size: 15px;
+                    }
+
+                    #materials .materials-card-v2:hover .readmore {
+                        color: #198754;
+                        opacity: 1;
+                        gap: 12px;
+                        text-shadow: 0 0 18px rgba(25, 135, 84, 0.22);
+                    }
+
+                    @@media (max-width: 991.98px) {
+                        #materials .materials-title-row {
+                            flex-direction: column;
+                            align-items: stretch;
+                            gap: 14px;
+                        }
+
+                        #materials .materials-title {
+                            text-align: center;
+                            transform: none;
+                        }
+
+                        #materials .materials-category-shortcut {
+                            flex-basis: auto;
+                            max-width: 100%;
+                            width: 100%;
+                            margin-left: 0;
+                        }
+                    }
+
+                    @@media (max-width: 575.98px) {
+                        #materials .materials-category-toggle {
+                            min-height: 42px;
+                            padding-left: 14px;
+                            padding-right: 40px;
+                            font-size: 13px;
+                        }
+
+                        #materials .materials-category-menu {
+                            min-width: 100%;
+                            max-width: 100%;
+                        }
+                    }
+        </style>
+
+        <div id="product-list"
+             data-initial-cursor="@(Model.InitialCursor ?? string.Empty)"
+             data-has-more="@(Model.HasMore ? "true" : "false")"
+             class="home-cards-grid">
+            @foreach (var product in Model.Products)
+            {
+                <div data-aos="fade-up" data-aos-delay="100" data-category="@(product.CategoryName ?? string.Empty)">
+                    <a asp-route="product-detail-seo" asp-route-slug="@product.Slug"
+                           data-product-id="@product.Id"
+                           data-product-slug="@product.Slug"
+                           class="card-item h-100 materials-card-v2 d-block text-decoration-none text-reset">
+                        <div class="materials-card-media">
+                            <img src="@product.PrimaryImage" data-image-sequence="@string.Join("|", product.Images)"
+                                 data-default-image="@product.PrimaryImage" alt="@product.Name"
+                                 class="img-fluid w-100 materials-hover-image"
+                                 width="640"
+                                 height="400"
+                                 loading="lazy"
+                                 decoding="async"
+                                 fetchpriority="low">
+                            <span class="materials-phone-overlay">@contactInfo.Phone</span>
+                            <span class="materials-badge">
+                                <i class="bi bi-@product.CategoryIcon"></i>
+                                @(product.CategoryName ?? "Phế liệu")
+                            </span>
+                        </div>
+                        <div class="materials-card-body">
+                            <h4 class="card-title">@product.Name</h4>
+                            <p>@(product.ShortDescription ?? product.Description ?? "Đang cập nhật thông tin sản phẩm.")</p>
+                            <span class="readmore">Xem chi tiết <i class="bi bi-arrow-right"></i></span>
+                        </div>
+                    </a>
+                </div>
+            }
+        </div>
+
+        <div id="product-load-more-wrap" class="text-center mt-4 @(Model.HasMore ? string.Empty : "d-none")">
+            <button type="button" id="product-load-more" class="btn btn-success btn-lg rounded-pill px-5">
+                Xem thêm <i class="bi bi-arrow-down-circle"></i>
+            </button>
+        </div>
+
+    </div>
+</section>
+
+<script>
+        (() => {
+            const productList = document.getElementById('product-list');
+            const loadMoreButton = document.getElementById('product-load-more');
+            const loadMoreWrap = document.getElementById('product-load-more-wrap');
+            const materialsCategorySelect = document.getElementById('materialsCategorySelect');
+            const materialsCategoryToggle = document.getElementById('materialsCategoryToggle');
+            const materialsCategoryLabel = document.getElementById('materialsCategoryLabel');
+            const materialsCategoryMenu = document.getElementById('materialsCategoryMenu');
+            const materialsCategoryShortcut = materialsCategoryToggle?.closest('.materials-category-shortcut');
+            const contactPhone = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(contactInfo.Phone));
+
+            let nextCursor = productList?.dataset.initialCursor || '';
+            let hasMore = productList?.dataset.hasMore === 'true';
+            let isLoading = false;
+
+            function escapeHtml(value) {
+                return String(value ?? '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+
+            function buildDetailUrl(slugValue, idValue) {
+                const id = Number(idValue);
+                if (!Number.isFinite(id) || id <= 0) {
+                    return '#';
+                }
+
+                const normalizedSlug = encodeURIComponent((slugValue ?? '').toString().trim());
+                return `/san-pham/${normalizedSlug}`;
+            }
+
+            function normalizeDetailLinks(scope) {
+                (scope ?? document).querySelectorAll('a[data-product-id]').forEach(link => {
+                    link.href = buildDetailUrl(link.dataset.productSlug, link.dataset.productId);
+                });
+            }
+
+            function toCategorySlug(categoryName) {
+                return String(categoryName ?? '')
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/đ/g, 'd')
+                    .replace(/Đ/g, 'D')
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/^-+|-+$/g, '') || 'tat-ca';
+            }
+
+            function applyCategoryFilter() {
+                if (!productList || !materialsCategorySelect) {
+                    return;
+                }
+
+                const selectedCategory = materialsCategorySelect.value;
+
+                productList.querySelectorAll('[data-category]').forEach(card => {
+                    const cardCategory = card.getAttribute('data-category') || '';
+                    const shouldShow = !selectedCategory || cardCategory === selectedCategory;
+                    card.style.display = shouldShow ? '' : 'none';
+                });
+            }
+
+            function setActiveCategoryOption(selectedCategory) {
+                if (!materialsCategoryMenu) {
+                    return;
+                }
+
+                materialsCategoryMenu.querySelectorAll('.materials-category-option').forEach(option => {
+                    const isActive = (option.getAttribute('data-category-value') || '') === selectedCategory;
+                    option.classList.toggle('active', isActive);
+                });
+            }
+
+            function closeCategoryMenu() {
+                materialsCategoryShortcut?.classList.remove('is-open');
+                materialsCategoryToggle?.setAttribute('aria-expanded', 'false');
+            }
+
+            function openCategoryMenu() {
+                materialsCategoryShortcut?.classList.add('is-open');
+                materialsCategoryToggle?.setAttribute('aria-expanded', 'true');
+            }
+
+            function renderProducts(products, append = false) {
+                if (!productList) return;
+
+                const rendered = products.map((product, index) => {
+                    const imageSequence = (product.images ?? []).filter(Boolean);
+                    const primaryImage = product.primaryImage ?? imageSequence[0] ?? '/assets/images/no-image.png';
+                    const detailUrl = buildDetailUrl(product.slug, product.id);
+                    const safeName = escapeHtml(product.name ?? 'Sản phẩm phế liệu');
+                    const safeDescription = escapeHtml(product.shortDescription ?? product.description ?? 'Đang cập nhật thông tin sản phẩm.');
+                    const safePrimaryImage = escapeHtml(primaryImage);
+                    const safeImageSequence = imageSequence.map(image => escapeHtml(image)).join('|');
+                    const safeCategoryIcon = escapeHtml(product.categoryIcon ?? 'box-seam');
+                    const safeCategoryName = escapeHtml(product.categoryName ?? 'Phế liệu');
+                    const safeCategoryValue = escapeHtml(product.categoryName ?? '');
+                    const safePhone = escapeHtml(contactPhone ?? '');
+                    const safeSlug = escapeHtml(product.slug ?? '');
+
+                    return `
+                    <div data-aos="fade-up" data-aos-delay="${100 + (index * 50)}" data-category="${safeCategoryValue}">
+                        <a href="${detailUrl}" data-product-id="${product.id}" data-product-slug="${safeSlug}" class="card-item h-100 materials-card-v2 d-block text-decoration-none text-reset">
+                            <div class="materials-card-media">
+                                <img src="${safePrimaryImage}"
+                                     data-image-sequence="${safeImageSequence}"
+                                     data-default-image="${safePrimaryImage}"
+                                     alt="${safeName}"
+                                     class="img-fluid w-100 materials-hover-image"
+                                     width="640"
+                                     height="400"
+                                     loading="lazy"
+                                     decoding="async"
+                                     fetchpriority="low">
+                                <span class="materials-phone-overlay">${safePhone}</span>
+                                <span class="materials-badge">
+                                    <i class="bi bi-${safeCategoryIcon}"></i>
+                                    ${safeCategoryName}
+                                </span>
+                            </div>
+                            <div class="materials-card-body">
+                                <h4 class="card-title">${safeName}</h4>
+                                <p>${safeDescription}</p>
+                                <span class="readmore">Xem chi tiết <i class="bi bi-arrow-right"></i></span>
+                            </div>
+                        </a>
+                    </div>`;
+                }).join('');
+
+                if (append) {
+                    productList.insertAdjacentHTML('beforeend', rendered);
+                } else {
+                    productList.innerHTML = rendered;
+                }
+
+                normalizeDetailLinks(productList);
+                bindProductHoverRotation();
+                applyCategoryFilter();
+            }
+
+            function updateLoadMoreButton() {
+                if (!loadMoreButton || !loadMoreWrap) {
+                    return;
+                }
+
+                loadMoreButton.disabled = isLoading;
+                loadMoreButton.innerHTML = isLoading
+                    ? 'Đang tải...'
+                    : 'Xem thêm <i class="bi bi-arrow-down-circle"></i>';
+                loadMoreWrap.classList.toggle('d-none', !hasMore);
+            }
+
+            async function fetchProducts(cursor, append) {
+                if (isLoading) {
+                    return;
+                }
+
+                isLoading = true;
+                updateLoadMoreButton();
+
+                const selectedCategory = materialsCategorySelect?.value || '';
+                const query = new URLSearchParams();
+                if (cursor) {
+                    query.set('cursor', cursor);
+                }
+                if (selectedCategory) {
+                    query.set('category', selectedCategory);
+                }
+
+                try {
+                    const response = await fetch(`/Product/GetProductsCursor?${query.toString()}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        return;
+                    }
+
+                    const data = await response.json();
+                    nextCursor = data.nextCursor ?? '';
+                    hasMore = data.hasMore === true;
+                    renderProducts(data.products ?? [], append);
+                } finally {
+                    isLoading = false;
+                    updateLoadMoreButton();
+                }
+            }
+
+            function resetProductList() {
+                nextCursor = '';
+                hasMore = true;
+                renderProducts([]);
+                fetchProducts('', false);
+            }
+
+            function bindProductHoverRotation() {
+                document.querySelectorAll('.materials-hover-image').forEach(function (imageElement) {
+                    const sequence = (imageElement.dataset.imageSequence || '')
+                        .split('|')
+                        .filter(Boolean);
+
+                    if (sequence.length <= 1) {
+                        return;
+                    }
+
+                    const defaultImage = imageElement.dataset.defaultImage || sequence[0];
+                    let intervalId = null;
+                    let currentIndex = 0;
+
+                    const startHoverRotation = function () {
+                        if (intervalId) {
+                            return;
+                        }
+
+                        currentIndex = sequence.length > 1 ? 1 : 0;
+                        imageElement.src = sequence[currentIndex];
+
+                        intervalId = setInterval(function () {
+                            currentIndex = (currentIndex + 1) % sequence.length;
+                            imageElement.src = sequence[currentIndex];
+                        }, 900);
+                    };
+
+                    const stopHoverRotation = function () {
+                        if (intervalId) {
+                            clearInterval(intervalId);
+                            intervalId = null;
+                        }
+
+                        currentIndex = 0;
+                        imageElement.src = defaultImage;
+                    };
+
+                    imageElement.addEventListener('mouseenter', startHoverRotation);
+                    imageElement.addEventListener('mouseleave', stopHoverRotation);
+                });
+            }
+
+            document.addEventListener('click', event => {
+                const detailLink = event.target.closest('a[data-product-id]');
+                if (!detailLink) {
+                    return;
+                }
+
+                detailLink.href = buildDetailUrl(detailLink.dataset.productSlug, detailLink.dataset.productId);
+            }, true);
+
+            normalizeDetailLinks(productList);
+            bindProductHoverRotation();
+            updateLoadMoreButton();
+
+            if (loadMoreButton) {
+                loadMoreButton.addEventListener('click', () => {
+                    if (!hasMore || !nextCursor) {
+                        return;
+                    }
+                    fetchProducts(nextCursor, true);
+                });
+            }
+
+            if (materialsCategoryToggle && materialsCategoryMenu && materialsCategorySelect) {
+                materialsCategoryToggle.addEventListener('click', event => {
+                    event.preventDefault();
+                    const isOpen = materialsCategoryShortcut?.classList.contains('is-open');
+                    if (isOpen) {
+                        closeCategoryMenu();
+                    } else {
+                        openCategoryMenu();
+                    }
+                });
+
+                materialsCategoryShortcut?.addEventListener('mouseenter', () => {
+                    openCategoryMenu();
+                });
+
+                materialsCategoryShortcut?.addEventListener('mouseleave', () => {
+                    closeCategoryMenu();
+                });
+
+                materialsCategoryMenu.querySelectorAll('.materials-category-option').forEach(option => {
+                    option.addEventListener('click', event => {
+                        event.preventDefault();
+                        const selectedCategory = option.getAttribute('data-category-value') || '';
+                        materialsCategorySelect.value = selectedCategory;
+                        if (materialsCategoryLabel) {
+                            materialsCategoryLabel.textContent = option.textContent?.trim() || 'Tất cả danh mục';
+                        }
+                        setActiveCategoryOption(selectedCategory);
+                        window.history.pushState({}, '', '/Product');
+                        resetProductList();
+                        closeCategoryMenu();
+                    });
+                });
+
+                document.addEventListener('click', event => {
+                    if (!materialsCategoryShortcut?.contains(event.target)) {
+                        closeCategoryMenu();
+                    }
+                });
+
+                document.addEventListener('keydown', event => {
+                    if (event.key === 'Escape') {
+                        closeCategoryMenu();
+                    }
+                });
+
+                setActiveCategoryOption(materialsCategorySelect.value);
+                applyCategoryFilter();
+            }
+        })();
+</script>
+
+@await Component.InvokeAsync("RecentNewsSectionComponent")
+
+<section class="services product-advantages-section home-card-section">
+    <div class="container-fluid home-section-shell" data-aos="fade-up">
+        
+        <div class="row gy-4 align-items-center">
+            <div class="col-lg-7">
+                <div class="product-advantages-highlight__content detail-referral-card">
+                    <h3>Tối ưu giá thu mua, tiết kiệm thời gian và hạn chế sai lệch khi cân hàng</h3>
+                    <p>
+                        Với mỗi nhóm như đồng, sắt, nhôm, inox, nhựa, cáp điện, mô tơ hay hàng công trình,
+                        chúng tôi áp dụng cách kiểm tra và định giá phù hợp để đảm bảo khách hàng nhận được mức
+                        thu mua sát thị trường thay vì bị gom chung một đơn giá.
+                    </p>
+                    <div class="product-advantages-highlight__stats">
+                        <div class="advantage-stat">
+                            <strong>Báo giá rõ loại</strong>
+                            <span>Tách riêng từng nhóm vật liệu có giá trị khác nhau</span>
+                        </div>
+                        <div class="advantage-stat">
+                            <strong>Thu gom đúng cách</strong>
+                            <span>Chuẩn bị nhân sự, xe tải và dụng cụ phù hợp từng lô hàng</span>
+                        </div>
+                        <div class="advantage-stat">
+                            <strong>Đối chiếu dễ dàng</strong>
+                            <span>Dễ kiểm tra khối lượng, hạn chế chênh lệch khi thanh toán</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="product-advantages-highlight__panel">
+                    <div class="highlight-panel-card">
+                        <div class="mini-icon"><i class="bi bi-file-earmark-check"></i></div>
+                        <h4>Quy trình gọn và minh bạch</h4>
+                        <ul>
+                            <li><i class="bi bi-check-circle-fill"></i> Khảo sát nhanh theo nhóm vật liệu</li>
+                            <li><i class="bi bi-check-circle-fill"></i> Ước tính giá trước khi thu gom</li>
+                            <li><i class="bi bi-check-circle-fill"></i> Cân tách loại rõ ràng tại chỗ</li>
+                            <li><i class="bi bi-check-circle-fill"></i> Thanh toán thuận tiện, dễ đối chiếu</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+</div>
+</div>
+</section>
+
+@await Component.InvokeAsync("ScrapPurchaseServicesSectionComponent")
+
+@functions {
+    string ToCategorySlug(string? categoryName)
+    {
+        if (string.IsNullOrWhiteSpace(categoryName))
+        {
+            return "tat-ca";
+        }
+
+        var normalized = categoryName.Trim().ToLowerInvariant().Normalize(System.Text.NormalizationForm.FormD);
+        var builder = new System.Text.StringBuilder();
+
+        foreach (var character in normalized)
+        {
+            var unicodeCategory = System.Globalization.CharUnicodeInfo.GetUnicodeCategory(character);
+
+            if (unicodeCategory == System.Globalization.UnicodeCategory.NonSpacingMark)
+            {
+                continue;
+            }
+
+            var convertedCharacter = character switch
+            {
+                'đ' => 'd',
+                _ => character
+            };
+
+            if (char.IsLetterOrDigit(convertedCharacter))
+            {
+                builder.Append(convertedCharacter);
+            }
+            else if (builder.Length == 0 || builder[^1] != '-')
+            {
+                builder.Append('-');
+            }
+        }
+
+        return builder.ToString().Trim('-');
+    }
+}
+
