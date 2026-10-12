@@ -58,5 +58,66 @@
     "C:\\Users\\Hoang Dinh Doanh\\.nuget\\packages\\system.security.cryptography.pkcs\\9.0.4\\system.security.cryptography.pkcs.9.0.4.nupkg.sha512",
     "C:\\Users\\Hoang Dinh Doanh\\.nuget\\packages\\system.security.cryptography.protecteddata\\9.0.4\\system.security.cryptography.protecteddata.9.0.4.nupkg.sha512"
   ],
-  "logs": []
+  "logs": [
+    {
+      "code": "NU1902",
+      "level": "Warning",
+      "message": "Package 'SixLabors.ImageSharp' 3.1.12 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-gwg2-r3hj-4w44",
+      "projectPath": "C:\\Users\\Hoang Dinh Doanh\\Desktop\\project\\PheLieuThanhTrung\\basethanhtrung\\WebThuMuaPheLieu.csproj",
+      "warningLevel": 1,
+      "filePath": "C:\\Users\\Hoang Dinh Doanh\\Desktop\\project\\PheLieuThanhTrung\\basethanhtrung\\WebThuMuaPheLieu.csproj",
+      "libraryId": "SixLabors.ImageSharp",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1903",
+      "level": "Warning",
+      "message": "Package 'SixLabors.ImageSharp' 3.1.12 has a known high severity vulnerability, https://github.com/advisories/GHSA-j3p4-wp97-rph4",
+      "projectPath": "C:\\Users\\Hoang Dinh Doanh\\Desktop\\project\\PheLieuThanhTrung\\basethanhtrung\\WebThuMuaPheLieu.csproj",
+      "warningLevel": 1,
+      "filePath": "C:\\Users\\Hoang Dinh Doanh\\Desktop\\project\\PheLieuThanhTrung\\basethanhtrung\\WebThuMuaPheLieu.csproj",
+      "libraryId": "SixLabors.ImageSharp",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1903",
+      "level": "Warning",
+      "message": "Package 'SixLabors.ImageSharp' 3.1.12 has a known high severity vulnerability, https://github.com/advisories/GHSA-j9gm-c75j-xc9q",
+      "projectPath": "C:\\Users\\Hoang Dinh Doanh\\Desktop\\project\\PheLieuThanhTrung\\basethanhtrung\\WebThuMuaPheLieu.csproj",
+      "warningLevel": 1,
+      "filePath": "C:\\Users\\Hoang Dinh Doanh\\Desktop\\project\\PheLieuThanhTrung\\basethanhtrung\\WebThuMuaPheLieu.csproj",
+      "libraryId": "SixLabors.ImageSharp",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1903",
+      "level": "Warning",
+      "message": "Package 'SixLabors.ImageSharp' 3.1.12 has a known high severity vulnerability, https://github.com/advisories/GHSA-jjfr-hcj7-qf5w",
+      "projectPath": "C:\\Users\\Hoang Dinh Doanh\\Desktop\\project\\PheLieuThanhTrung\\basethanhtrung\\WebThuMuaPheLieu.csproj",
+      "warningLevel": 1,
+      "filePath": "C:\\Users\\Hoang Dinh Doanh\\Desktop\\project\\PheLieuThanhTrung\\basethanhtrung\\WebThuMuaPheLieu.csproj",
+      "libraryId": "SixLabors.ImageSharp",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1902",
+      "level": "Warning",
+      "message": "Package 'SixLabors.ImageSharp' 3.1.12 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-wmxv-xphr-5c9g",
+      "projectPath": "C:\\Users\\Hoang Dinh Doanh\\Desktop\\project\\PheLieuThanhTrung\\basethanhtrung\\WebThuMuaPheLieu.csproj",
+      "warningLevel": 1,
+      "filePath": "C:\\Users\\Hoang Dinh Doanh\\Desktop\\project\\PheLieuThanhTrung\\basethanhtrung\\WebThuMuaPheLieu.csproj",
+      "libraryId": "SixLabors.ImageSharp",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    }
+  ]
 }
