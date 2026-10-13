@@ -94,9 +94,8 @@ public class StructuredDataService : IStructuredDataService
     {
         var site = BuildSiteContext(httpContext);
         var post = model.Post;
-        var canonical = !string.IsNullOrWhiteSpace(model.CurrentUrl)
-            ? model.CurrentUrl
-            : BuildAbsoluteUrl(httpContext, httpContext.Request.Path + httpContext.Request.QueryString);
+        var postSlug = !string.IsNullOrWhiteSpace(post.Slug) ? post.Slug : post.Id.ToString();
+        var canonical = $"{site.BaseUrl}/blog/{postSlug}";
 
         var publishedAt = post.PublishedAt ?? post.CreatedAt;
         var modifiedAt = post.UpdatedAt ?? publishedAt;
@@ -181,7 +180,7 @@ public class StructuredDataService : IStructuredDataService
         var productSlug = !string.IsNullOrWhiteSpace(model.Product.Slug)
             ? model.Product.Slug
             : model.Product.Id.ToString(CultureInfo.InvariantCulture);
-        var canonical = BuildAbsoluteUrl(httpContext, $"/san-pham/{productSlug}");
+        var canonical = $"{site.BaseUrl}/san-pham/{productSlug}";
         var product = model.Product;
 
         var imageUrls = (model.Images ?? [])

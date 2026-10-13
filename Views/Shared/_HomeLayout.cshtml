@@ -44,15 +44,48 @@
         ? storedOgImage
         : "/assets/img/satthep.jpg";
 
+    var baseSiteUrl = "https://phelieuthanhtrung.vn";
     var faviconUrl = Url.Content(ogImage);
     var absoluteOgImageUrl = faviconUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
         || faviconUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
             ? faviconUrl
-            : $"{Context.Request.Scheme}://{Context.Request.Host}{faviconUrl}";
-    var currentAbsoluteUrl = $"{Context.Request.Scheme}://{Context.Request.Host}{Context.Request.Path}{Context.Request.QueryString}";
+            : $"{baseSiteUrl}{faviconUrl}";
+
+    var isPagination = Context.Request.Query.ContainsKey("page");
+    var hasQueryParameters = Context.Request.QueryString.HasValue && Context.Request.Query.Count > 0;
+
+    if (string.IsNullOrWhiteSpace(pageRobots))
+    {
+        if (isPagination || hasQueryParameters)
+        {
+            pageRobots = "noindex, follow";
+        }
+        else
+        {
+            pageRobots = "index, follow";
+        }
+    }
+
+    // Chuẩn hóa đường dẫn sạch: Không gắn QueryString vào thẻ Canonical
+    var cleanRequestPath = Context.Request.Path.Value?.TrimEnd('/') ?? string.Empty;
+    var autoCleanUrl = string.IsNullOrEmpty(cleanRequestPath)
+        ? $"{baseSiteUrl}/"
+        : $"{baseSiteUrl}{cleanRequestPath}";
+
     var canonicalUrl = !string.IsNullOrWhiteSpace(pageCanonical)
         ? pageCanonical
-        : currentAbsoluteUrl;
+        : autoCleanUrl;
+
+    // Đảm bảo Canonical luôn là HTTPS và không chứa Query String
+    if (canonicalUrl.Contains('?'))
+    {
+        canonicalUrl = canonicalUrl.Split('?')[0];
+    }
+    if (canonicalUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+    {
+        canonicalUrl = "https://" + canonicalUrl.Substring("http://".Length);
+    }
+
     var ogUrl = canonicalUrl;
     var ogType = !string.IsNullOrWhiteSpace(pageOgType) ? pageOgType : "website";
     var needsSwiper = ViewData["NeedsSwiper"] is true
@@ -79,10 +112,7 @@
     <title>@metaTitle</title>
     <meta name="description" content="@metaDescription" />
     <meta name="keywords" content="@seoKeywords" />
-    @if (!string.IsNullOrWhiteSpace(pageRobots))
-    {
-        <meta name="robots" content="@pageRobots" />
-    }
+    <meta name="robots" content="@pageRobots" />
     <link rel="canonical" href="@canonicalUrl" />
     <meta property="og:title" content="@ogTitle" />
     <meta property="og:description" content="@metaDescription" />

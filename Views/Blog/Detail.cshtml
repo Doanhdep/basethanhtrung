@@ -72,9 +72,10 @@
         ViewData["Keywords"] = Model.Post.SeoKeyword;
     }
 
-    ViewData["Canonical"] = !string.IsNullOrWhiteSpace(Model.CurrentUrl)
-        ? Model.CurrentUrl
-        : $"{Context.Request.Scheme}://{Context.Request.Host}{Context.Request.Path}{Context.Request.QueryString}";
+    var postSlug = !string.IsNullOrWhiteSpace(Model.Post.Slug) ? Model.Post.Slug : Model.Post.Id.ToString();
+    var cleanBlogUrl = $"https://phelieuthanhtrung.vn/blog/{postSlug}";
+    ViewData["Canonical"] = cleanBlogUrl;
+    ViewData["Robots"] = "index, follow";
     ViewData["OgType"] = "article";
 
     var structuredDataJson = StructuredDataService.SerializeSchemas(StructuredDataService.BuildBlogDetailSchemas(Context, Model));

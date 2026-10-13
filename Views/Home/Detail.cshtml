@@ -79,8 +79,9 @@
   }
 
   var seoSlug = !string.IsNullOrWhiteSpace(Model.Product.Slug) ? Model.Product.Slug : Model.Product.Id.ToString();
-  var seoPath = Url.RouteUrl("product-detail-seo", new { slug = seoSlug }) ?? $"/san-pham/{seoSlug}";
-  ViewData["Canonical"] = $"{Context.Request.Scheme}://{Context.Request.Host}{seoPath}";
+  var cleanProductUrl = $"https://phelieuthanhtrung.vn/san-pham/{seoSlug}";
+  ViewData["Canonical"] = cleanProductUrl;
+  ViewData["Robots"] = "index, follow";
   ViewData["OgType"] = "product";
   var structuredDataJson = StructuredDataService.SerializeSchemas(StructuredDataService.BuildProductDetailSchemas(Context, Model));
   var contactPhoneDigits = new string((contactInfo.Phone ?? string.Empty).Where(char.IsDigit).ToArray());

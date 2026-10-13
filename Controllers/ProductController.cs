@@ -39,8 +39,13 @@ public class ProductController : Controller
 
         if (!string.IsNullOrWhiteSpace(category))
         {
-            ViewData["Robots"] = "noindex,follow";
-            ViewData["Canonical"] = Url.Action(nameof(Index), "Product", null, Request.Scheme);
+            ViewData["Robots"] = "noindex, follow";
+            ViewData["Canonical"] = "https://phelieuthanhtrung.vn/Product";
+        }
+        else
+        {
+            ViewData["Robots"] = "index, follow";
+            ViewData["Canonical"] = "https://phelieuthanhtrung.vn/Product";
         }
 
         var viewModel = await BuildProductIndexViewModelAsync(category);

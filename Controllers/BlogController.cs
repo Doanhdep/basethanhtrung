@@ -65,8 +65,13 @@ public class BlogController : Controller
 
         if (!string.IsNullOrWhiteSpace(normalizedSearchTerm) || !string.IsNullOrWhiteSpace(normalizedCategoryName))
         {
-            ViewData["Robots"] = "noindex,follow";
-            ViewData["Canonical"] = $"{Request.Scheme}://{Request.Host}/Blog";
+            ViewData["Robots"] = "noindex, follow";
+            ViewData["Canonical"] = "https://phelieuthanhtrung.vn/Blog";
+        }
+        else
+        {
+            ViewData["Robots"] = "index, follow";
+            ViewData["Canonical"] = "https://phelieuthanhtrung.vn/Blog";
         }
 
         var viewModel = await BuildBlogIndexViewModelAsync(searchTerm, categoryName);

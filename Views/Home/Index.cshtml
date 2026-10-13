@@ -8,7 +8,8 @@
     ViewData["NeedsAos"] = true;
     ViewData["NeedsBungee"] = true;
     ViewData["Description"] = "Phế Liệu Thành Trung chuyên thu mua phế liệu giá cao tận nơi, hỗ trợ khảo sát nhanh, báo giá minh bạch và thanh toán linh hoạt tại TP.HCM, Bình Dương, Đồng Nai.";
-    ViewData["Canonical"] = $"{Context.Request.Scheme}://{Context.Request.Host}{Context.Request.Path}";
+    ViewData["Canonical"] = "https://phelieuthanhtrung.vn/";
+    ViewData["Robots"] = "index, follow";
     ViewData["OgType"] = "website";
     var structuredDataJson = StructuredDataService.SerializeSchemas(StructuredDataService.BuildHomeSchemas(Context));
 
