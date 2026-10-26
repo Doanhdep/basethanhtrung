@@ -12,7 +12,7 @@ namespace WebThuMuaPheLieu.Controllers
 {
     public class HomeController : Controller
     {
-        private const int HomeProductCount = 16;
+        private const int HomeProductCount = 32;
 
         private static readonly TimeSpan HomeProductsCacheDuration = TimeSpan.FromMinutes(10);
 

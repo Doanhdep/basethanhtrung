@@ -236,7 +236,8 @@
                 transform: translateY(-1px);
             }
 
-            #materials .materials-grid-swiper {
+            #materials .materials-grid-swiper,
+            #materials .materials-row2-swiper {
                 overflow: hidden;
                 padding: 4px 2px 36px;
                 cursor: grab;
@@ -246,24 +247,48 @@
                 -webkit-tap-highlight-color: transparent;
             }
 
-            #materials .materials-grid-swiper.swiper-grabbing {
+            #materials .materials-row1-swiper {
+                overflow: hidden;
+                padding: 4px 2px 6px;
+                cursor: grab;
+                user-select: none;
+                -webkit-user-select: none;
+                touch-action: pan-y;
+                -webkit-tap-highlight-color: transparent;
+            }
+
+            #materials .materials-swiper-container {
+                position: relative;
+            }
+
+            #materials .materials-swiper-container + .materials-swiper-container {
+                margin-top: 14px;
+            }
+
+            #materials .materials-grid-swiper.swiper-grabbing,
+            #materials .materials-row1-swiper.swiper-grabbing,
+            #materials .materials-row2-swiper.swiper-grabbing {
                 cursor: grabbing;
             }
 
-            #materials .materials-grid-swiper .swiper-wrapper {
+            #materials .materials-grid-swiper .swiper-wrapper,
+            #materials .materials-row1-swiper .swiper-wrapper,
+            #materials .materials-row2-swiper .swiper-wrapper {
                 align-items: stretch;
                 will-change: transform;
                 transform: translateZ(0);
             }
 
-            #materials .materials-grid-swiper .swiper-slide {
+            #materials .materials-grid-swiper .swiper-slide,
+            #materials .materials-row1-swiper .swiper-slide,
+            #materials .materials-row2-swiper .swiper-slide {
                 height: auto;
                 display: flex;
                 transform: translateZ(0);
                 backface-visibility: hidden;
             }
 
-            #materials .materials-grid-swiper .materials-card-v2 {
+            #materials .materials-card-v2 {
                 width: 100%;
                 height: 100%;
                 display: flex !important;
@@ -274,7 +299,7 @@
                 backface-visibility: hidden;
             }
 
-            #materials .materials-grid-swiper .materials-card-media {
+            #materials .materials-card-media {
                 aspect-ratio: 16 / 10;
                 height: auto;
                 min-height: 220px;
@@ -284,7 +309,7 @@
                 backface-visibility: hidden;
             }
 
-            #materials .materials-grid-swiper .materials-hover-image {
+            #materials .materials-hover-image {
                 width: 100%;
                 height: 100%;
                 object-fit: cover;
@@ -312,11 +337,15 @@
                 pointer-events: none;
             }
 
-            #materials .materials-products-pagination {
+            #materials .materials-products-pagination,
+            #materials .materials-row1-pagination,
+            #materials .materials-row2-pagination {
                 bottom: 0 !important;
             }
 
-            #materials .materials-products-pagination .swiper-pagination-bullet {
+            #materials .materials-products-pagination .swiper-pagination-bullet,
+            #materials .materials-row1-pagination .swiper-pagination-bullet,
+            #materials .materials-row2-pagination .swiper-pagination-bullet {
                 width: 10px;
                 height: 10px;
                 background: rgba(15, 23, 42, 0.22);
@@ -324,7 +353,9 @@
                 transition: width 0.25s ease, border-radius 0.25s ease, background 0.25s ease;
             }
 
-            #materials .materials-products-pagination .swiper-pagination-bullet-active {
+            #materials .materials-products-pagination .swiper-pagination-bullet-active,
+            #materials .materials-row1-pagination .swiper-pagination-bullet-active,
+            #materials .materials-row2-pagination .swiper-pagination-bullet-active {
                 width: 24px;
                 border-radius: 999px;
                 background: #198754;
@@ -381,11 +412,16 @@
                     font-size: 13px;
                 }
 
-                #materials .materials-grid-swiper {
+                #materials .materials-grid-swiper,
+                #materials .materials-row2-swiper {
                     padding-bottom: 34px;
                 }
 
-                #materials .materials-grid-swiper .materials-card-media {
+                #materials .materials-row1-swiper {
+                    padding-bottom: 6px;
+                }
+
+                #materials .materials-card-media {
                     min-height: 190px;
                 }
 
@@ -409,6 +445,23 @@
                 })
                 .OrderBy(item => item.Name)
                 .ToList();
+
+            // Sắp xếp ưu tiên sản phẩm nổi bật (IsFeatured) lên đầu
+            var sortedProducts = productList
+                .OrderByDescending(p => p.IsFeatured)
+                .ToList();
+
+            // Phân chia 2 hàng:
+            // Nếu có >= 8 sản phẩm: Hàng 1 lấy nửa đầu (chứa các sản phẩm nổi bật nhất), hàng 2 lấy nửa còn lại
+            // Nếu ít hơn 8: Hàng 1 hiển thị các sản phẩm, hàng 2 hiển thị nếu có từ 2 sản phẩm trở lên
+            var halfCount = (int)Math.Ceiling(sortedProducts.Count / 2.0);
+            if (sortedProducts.Count >= 8 && halfCount < 4)
+            {
+                halfCount = 4;
+            }
+
+            var row1Products = sortedProducts.Take(halfCount).ToList();
+            var row2Products = sortedProducts.Skip(halfCount).ToList();
         }
 
         <div class="materials-header-row">
@@ -425,52 +478,106 @@
 
         @if (productList.Any())
         {
-            <div class="materials-grid-swiper swiper" data-aos="fade-up" data-aos-delay="100">
-                <div class="swiper-wrapper">
-                    @for (var productIndex = 0; productIndex < productList.Count; productIndex++)
-                    {
-                        var product = productList[productIndex];
-                        var imageSequence = BuildImageSequence(product);
-                        var categorySlug = ToCategorySlug(product.CategoryName);
-                        var (productImageWidth, productImageHeight) = GetImageDimensions(imageSequence[0], 640, 400);
+            @* HÀNG 1: Ưu tiên các sản phẩm nổi bật *@
+            <div class="materials-swiper-container">
+                <div class="materials-row1-swiper swiper" data-aos="fade-up" data-aos-delay="100">
+                    <div class="swiper-wrapper">
+                        @for (var productIndex = 0; productIndex < row1Products.Count; productIndex++)
+                        {
+                            var product = row1Products[productIndex];
+                            var imageSequence = BuildImageSequence(product);
+                            var categorySlug = ToCategorySlug(product.CategoryName);
+                            var (productImageWidth, productImageHeight) = GetImageDimensions(imageSequence[0], 640, 400);
 
-                        <div class="swiper-slide" data-category="@categorySlug">
-                            <a asp-route="product-detail-seo"
-                               asp-route-slug="@product.Slug"
-                               class="card-item h-100 materials-card-v2 d-block text-decoration-none text-reset">
-                                <div class="materials-card-media">
-                                    <img src="@imageSequence[0]"
-                                         data-image-sequence="@string.Join("|", imageSequence)"
-                                         data-default-image="@imageSequence[0]"
-                                         alt="@product.Name"
-                                         class="img-fluid w-100 materials-hover-image"
-                                         width="@productImageWidth"
-                                         height="@productImageHeight"
-                                         loading="@(productIndex == 0 ? "eager" : "lazy")"
-                                         decoding="async"
-                                         fetchpriority="@(productIndex == 0 ? "high" : "low")"
-                                         sizes="(max-width: 575.98px) 100vw, (max-width: 991.98px) 50vw, 25vw">
+                            <div class="swiper-slide" data-category="@categorySlug">
+                                <a asp-route="product-detail-seo"
+                                   asp-route-slug="@product.Slug"
+                                   class="card-item h-100 materials-card-v2 d-block text-decoration-none text-reset">
+                                    <div class="materials-card-media">
+                                        <img src="@imageSequence[0]"
+                                             data-image-sequence="@string.Join("|", imageSequence)"
+                                             data-default-image="@imageSequence[0]"
+                                             alt="@product.Name"
+                                             class="img-fluid w-100 materials-hover-image"
+                                             width="@productImageWidth"
+                                             height="@productImageHeight"
+                                             loading="@(productIndex == 0 ? "eager" : "lazy")"
+                                             decoding="async"
+                                             fetchpriority="@(productIndex == 0 ? "high" : "low")"
+                                             sizes="(max-width: 575.98px) 100vw, (max-width: 991.98px) 50vw, 25vw">
 
-                                    <span class="materials-phone-overlay">@contactInfo.Phone</span>
+                                        <span class="materials-phone-overlay">@contactInfo.Phone</span>
 
-                                    <span class="materials-badge">
-                                        <i class="bi bi-@(GetCategoryIcon(product.CategoryName))"></i>
-                                        @(product.CategoryName ?? "Phế liệu")
-                                    </span>
-                                </div>
+                                        <span class="materials-badge">
+                                            <i class="bi bi-@(GetCategoryIcon(product.CategoryName))"></i>
+                                            @(product.CategoryName ?? "Phế liệu")
+                                        </span>
+                                    </div>
 
-                                <div class="materials-card-body">
-                                    <h4 class="card-title">@product.Name</h4>
-                                    <p>@(product.ShortDescription ?? product.Description ?? "Đang cập nhật thông tin sản phẩm.")</p>
-                                    <span class="readmore">Xem chi tiết <i class="bi bi-arrow-right"></i></span>
-                                </div>
-                            </a>
-                        </div>
-                    }
+                                    <div class="materials-card-body">
+                                        <h4 class="card-title">@product.Name</h4>
+                                        <p>@(product.ShortDescription ?? product.Description ?? "Đang cập nhật thông tin sản phẩm.")</p>
+                                        <span class="readmore">Xem chi tiết <i class="bi bi-arrow-right"></i></span>
+                                    </div>
+                                </a>
+                            </div>
+                        }
+                    </div>
                 </div>
-
-                <div class="materials-products-pagination swiper-pagination"></div>
             </div>
+
+            @* HÀNG 2: Hàng thứ hai độc lập có thanh cuộn / phân trang riêng *@
+            @if (row2Products.Any())
+            {
+                <div class="materials-swiper-container">
+                    <div class="materials-row2-swiper swiper" data-aos="fade-up" data-aos-delay="150">
+                        <div class="swiper-wrapper">
+                            @for (var productIndex = 0; productIndex < row2Products.Count; productIndex++)
+                            {
+                                var product = row2Products[productIndex];
+                                var imageSequence = BuildImageSequence(product);
+                                var categorySlug = ToCategorySlug(product.CategoryName);
+                                var (productImageWidth, productImageHeight) = GetImageDimensions(imageSequence[0], 640, 400);
+
+                                <div class="swiper-slide" data-category="@categorySlug">
+                                    <a asp-route="product-detail-seo"
+                                       asp-route-slug="@product.Slug"
+                                       class="card-item h-100 materials-card-v2 d-block text-decoration-none text-reset">
+                                        <div class="materials-card-media">
+                                            <img src="@imageSequence[0]"
+                                                 data-image-sequence="@string.Join("|", imageSequence)"
+                                                 data-default-image="@imageSequence[0]"
+                                                 alt="@product.Name"
+                                                 class="img-fluid w-100 materials-hover-image"
+                                                 width="@productImageWidth"
+                                                 height="@productImageHeight"
+                                                 loading="lazy"
+                                                 decoding="async"
+                                                 fetchpriority="low"
+                                                 sizes="(max-width: 575.98px) 100vw, (max-width: 991.98px) 50vw, 25vw">
+
+                                            <span class="materials-phone-overlay">@contactInfo.Phone</span>
+
+                                            <span class="materials-badge">
+                                                <i class="bi bi-@(GetCategoryIcon(product.CategoryName))"></i>
+                                                @(product.CategoryName ?? "Phế liệu")
+                                            </span>
+                                        </div>
+
+                                        <div class="materials-card-body">
+                                            <h4 class="card-title">@product.Name</h4>
+                                            <p>@(product.ShortDescription ?? product.Description ?? "Đang cập nhật thông tin sản phẩm.")</p>
+                                            <span class="readmore">Xem chi tiết <i class="bi bi-arrow-right"></i></span>
+                                        </div>
+                                    </a>
+                                </div>
+                            }
+                        </div>
+
+                        <div class="materials-row2-pagination swiper-pagination"></div>
+                    </div>
+                </div>
+            }
         }
         else
         {
