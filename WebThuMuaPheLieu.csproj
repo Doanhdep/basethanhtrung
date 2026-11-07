@@ -12,6 +12,11 @@
     <UseAppHost>false</UseAppHost>
   </PropertyGroup>
 
+  <!-- Biên dịch sẵn mã máy lúc publish để rút ngắn cold start trên IIS -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <PublishReadyToRun>true</PublishReadyToRun>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.5" />
     

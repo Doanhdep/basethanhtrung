@@ -40,9 +40,12 @@
         ? storedOgTitle
         : metaTitle;
 
-    var ogImage = seoSettings.TryGetValue("OgImage", out var storedOgImage) && !string.IsNullOrWhiteSpace(storedOgImage)
-        ? storedOgImage
-        : "/assets/img/satthep.jpg";
+    var pageOgImage = ViewData["OgImage"]?.ToString()?.Trim();
+    var ogImage = !string.IsNullOrWhiteSpace(pageOgImage)
+        ? pageOgImage
+        : seoSettings.TryGetValue("OgImage", out var storedOgImage) && !string.IsNullOrWhiteSpace(storedOgImage)
+            ? storedOgImage
+            : "/assets/img/satthep.jpg";
 
     var baseSiteUrl = "https://phelieuthanhtrung.vn";
     var faviconUrl = Url.Content(ogImage);
@@ -119,9 +122,16 @@
     <meta property="og:url" content="@ogUrl" />
     <meta property="og:image" content="@absoluteOgImageUrl" />
     <meta property="og:type" content="@ogType" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="@ogTitle" />
+    <meta name="twitter:description" content="@metaDescription" />
+    <meta name="twitter:image" content="@absoluteOgImageUrl" />
 
-    <link href="@faviconUrl" rel="icon" />
-    <link href="@faviconUrl" rel="apple-touch-icon" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/assets/img/favicon-192.png" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/assets/img/favicon-48.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/img/favicon-192.png" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

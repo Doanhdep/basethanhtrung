@@ -281,7 +281,8 @@ document.addEventListener('DOMContentLoaded', () => {
       duration: 800,
       easing: 'slide',
       once: true,
-      mirror: false
+      mirror: false,
+      disable: window.matchMedia('(max-width: 991.98px)').matches
     });
   }
   window.addEventListener('load', () => {

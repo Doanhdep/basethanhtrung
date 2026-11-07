@@ -369,6 +369,13 @@ public class StructuredDataService : IStructuredDataService
             normalized = $"https:{normalized}";
         }
 
+        // Admin hay nhập số điện thoại vào field link Zalo -> đổi thành link zalo.me
+        var digits = new string(normalized.Where(char.IsDigit).ToArray());
+        if (digits.Length >= 6 && normalized.All(c => char.IsDigit(c) || c == '+' || c == '-' || c == '.' || c == ' ' || c == '(' || c == ')'))
+        {
+            return $"https://zalo.me/{digits}";
+        }
+
         if (!normalized.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
             && !normalized.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
         {

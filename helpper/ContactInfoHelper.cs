@@ -89,6 +89,13 @@ public class ContactInfoHelper : IContactInfoHelper
             return trimmed;
         }
 
+        // Admin hay nhập số điện thoại vào field link Zalo -> đổi thành link zalo.me
+        var digits = new string(trimmed.Where(char.IsDigit).ToArray());
+        if (digits.Length >= 6 && trimmed.All(c => char.IsDigit(c) || c == '+' || c == '-' || c == '.' || c == ' ' || c == '(' || c == ')'))
+        {
+            return $"https://zalo.me/{digits}";
+        }
+
         return $"https://{trimmed.TrimStart('/')}";
     }
 }

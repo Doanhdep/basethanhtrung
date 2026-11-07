@@ -21,13 +21,12 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         const totalSlides = swiperElement.querySelectorAll('.swiper-slide:not(.swiper-slide-duplicate)').length;
+        const transitionSpeed = window.innerWidth < 768 ? 300 : 420;
 
         const instance = new Swiper(swiperElement, {
-            speed: 420,
+            speed: transitionSpeed,
             loop: totalSlides > 4,
             rewind: false,
-            loopAdditionalSlides: 2,
-            loopPreventsSliding: false,
 
             slidesPerView: 1,
             slidesPerGroup: 1,
@@ -38,24 +37,27 @@ document.addEventListener('DOMContentLoaded', function () {
             simulateTouch: true,
             followFinger: true,
 
-            touchRatio: 1,
+            touchRatio: 1.6,
             touchAngle: 45,
-            threshold: 5,
-
-            longSwipes: true,
-            longSwipesRatio: 0.15,
-            longSwipesMs: 220,
-            shortSwipes: true,
+            threshold: 2,
 
             resistance: true,
             resistanceRatio: 0.85,
+
+            // Lướt liên tục theo tay: vuốt mạnh trôi qua nhiều thẻ,
+            // vuốt nhẹ dừng ở thẻ gần nhất (không nhảy từng thẻ cứng nhắc)
+            freeMode: {
+                enabled: true,
+                sticky: true,
+                momentumBounce: false,
+                momentumVelocityRatio: 1.45,
+                momentumRatio: 1.4
+            },
 
             preventClicks: true,
             preventClicksPropagation: true,
             touchStartPreventDefault: false,
 
-            observer: true,
-            observeParents: true,
             watchOverflow: true,
 
             autoplay: false,
@@ -178,6 +180,10 @@ document.addEventListener('DOMContentLoaded', function () {
     }, true);
 
     function bindMaterialsHoverRotation() {
+        if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+            return;
+        }
+
         document.querySelectorAll('#materials .materials-card-media').forEach(function (mediaElement) {
             const imageElement = mediaElement.querySelector('.materials-hover-image');
             if (!imageElement || imageElement.dataset.rotationInitialized === 'true') {
@@ -235,10 +241,53 @@ document.addEventListener('DOMContentLoaded', function () {
 
     bindMaterialsHoverRotation();
 
+    // Tải trước ảnh của các slide kế tiếp để không khựng khi vuốt chuyển slide
+    const preloadAroundActive = function (swiperInstance, fromOffset, toOffset) {
+        const slides = swiperInstance.slides;
+        const total = slides.length;
+        if (!total) {
+            return;
+        }
+
+        for (let offset = fromOffset; offset <= toOffset; offset++) {
+            const index = ((swiperInstance.activeIndex + offset) % total + total) % total;
+            const slide = slides[index];
+            if (!slide) {
+                continue;
+            }
+
+            slide.querySelectorAll('img').forEach(function (img) {
+                if (img.dataset.preloadDone === 'true') {
+                    return;
+                }
+
+                const src = img.getAttribute('src') || img.dataset.defaultImage;
+                if (!src) {
+                    return;
+                }
+
+                img.dataset.preloadDone = 'true';
+                const preloadImage = new Image();
+                preloadImage.decoding = 'async';
+                preloadImage.onload = function () {
+                    // Ép giải mã ảnh vào bộ nhớ GPU trước khi slide cần hiển thị
+                    if (typeof preloadImage.decode === 'function') {
+                        preloadImage.decode().catch(function () {});
+                    }
+                };
+                preloadImage.src = src;
+            });
+        }
+    };
+
     swiperInstances.forEach(function (entry) {
         if (entry.instance) {
             entry.instance.on('slideChangeTransitionEnd', bindMaterialsHoverRotation);
             entry.instance.on('update', bindMaterialsHoverRotation);
+            entry.instance.on('slideChangeTransitionEnd', function () {
+                preloadAroundActive(entry.instance, 1, 4);
+            });
+            preloadAroundActive(entry.instance, 0, 4);
         }
     });
 });

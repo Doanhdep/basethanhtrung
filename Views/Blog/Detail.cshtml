@@ -77,6 +77,10 @@
     ViewData["Canonical"] = cleanBlogUrl;
     ViewData["Robots"] = "index, follow";
     ViewData["OgType"] = "article";
+    if (!string.IsNullOrWhiteSpace(Model.CoverImage))
+    {
+        ViewData["OgImage"] = Model.CoverImage;
+    }
 
     var structuredDataJson = StructuredDataService.SerializeSchemas(StructuredDataService.BuildBlogDetailSchemas(Context, Model));
 }

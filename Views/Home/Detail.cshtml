@@ -83,6 +83,10 @@
   ViewData["Canonical"] = cleanProductUrl;
   ViewData["Robots"] = "index, follow";
   ViewData["OgType"] = "product";
+  if (!string.IsNullOrWhiteSpace(coverImage) && coverImage != "/images/no-image.png")
+  {
+    ViewData["OgImage"] = coverImage;
+  }
   var structuredDataJson = StructuredDataService.SerializeSchemas(StructuredDataService.BuildProductDetailSchemas(Context, Model));
   var contactPhoneDigits = new string((contactInfo.Phone ?? string.Empty).Where(char.IsDigit).ToArray());
   var productDetailPhoneHref = string.IsNullOrWhiteSpace(contactPhoneDigits) ? "tel:0974640626" : $"tel:{contactPhoneDigits}";
