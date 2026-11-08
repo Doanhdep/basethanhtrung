@@ -336,6 +336,45 @@
                 pointer-events: none;
             }
 
+            #materials .materials-featured-badge {
+                position: absolute;
+                top: 14px;
+                right: 14px;
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                padding: 6px 12px;
+                border-radius: 999px;
+                background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+                color: #ffffff;
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.3px;
+                box-shadow: 0 4px 14px rgba(234, 88, 12, 0.45);
+                border: 1px solid rgba(255, 255, 255, 0.35);
+                z-index: 3;
+                pointer-events: none;
+                text-transform: uppercase;
+            }
+
+            #materials .materials-featured-badge i {
+                color: #ffffff;
+                font-size: 11px;
+            }
+
+            @@media (max-width: 767.98px) {
+                #materials .materials-featured-badge {
+                    top: 8px;
+                    right: 8px;
+                    padding: 4px 8px;
+                    font-size: 9.5px;
+                    gap: 3px;
+                }
+                #materials .materials-featured-badge i {
+                    font-size: 9.5px;
+                }
+            }
+
             #materials .materials-products-pagination,
             #materials .materials-row1-pagination,
             #materials .materials-row2-pagination {
@@ -445,22 +484,44 @@
                 .OrderBy(item => item.Name)
                 .ToList();
 
-            // Sắp xếp ưu tiên sản phẩm nổi bật (IsFeatured) lên đầu
-            var sortedProducts = productList
-                .OrderByDescending(p => p.IsFeatured)
+            // Tách riêng danh sách nổi bật và thông thường (giữ nguyên thứ tự ưu tiên cập nhật mới nhất từ Controller)
+            var featuredProducts = productList
+                .Where(p => p.IsFeatured)
                 .ToList();
 
-            // Phân chia 2 hàng:
-            // Nếu có >= 8 sản phẩm: Hàng 1 lấy nửa đầu (chứa các sản phẩm nổi bật nhất), hàng 2 lấy nửa còn lại
-            // Nếu ít hơn 8: Hàng 1 hiển thị các sản phẩm, hàng 2 hiển thị nếu có từ 2 sản phẩm trở lên
-            var halfCount = (int)Math.Ceiling(sortedProducts.Count / 2.0);
-            if (sortedProducts.Count >= 8 && halfCount < 4)
+            var normalProducts = productList
+                .Where(p => !p.IsFeatured)
+                .ToList();
+
+            // Phân bổ xen kẽ thông minh vào 2 hàng:
+            // 1. Phân bổ các sản phẩm nổi bật vào cả 2 hàng để cả Hàng 1 và Hàng 2 đều có sản phẩm nổi bật ngay các slide đầu tiên
+            var row1Products = new List<WebThuMuaPheLieu.Models.ProductCardViewModel>();
+            var row2Products = new List<WebThuMuaPheLieu.Models.ProductCardViewModel>();
+
+            for (var i = 0; i < featuredProducts.Count; i++)
             {
-                halfCount = 4;
+                if (i % 2 == 0)
+                {
+                    row1Products.Add(featuredProducts[i]);
+                }
+                else
+                {
+                    row2Products.Add(featuredProducts[i]);
+                }
             }
 
-            var row1Products = sortedProducts.Take(halfCount).ToList();
-            var row2Products = sortedProducts.Skip(halfCount).ToList();
+            // 2. Tiếp tục phân bổ các sản phẩm thông thường vào cả 2 hàng sao cho cân bằng số lượng
+            for (var i = 0; i < normalProducts.Count; i++)
+            {
+                if (row1Products.Count <= row2Products.Count)
+                {
+                    row1Products.Add(normalProducts[i]);
+                }
+                else
+                {
+                    row2Products.Add(normalProducts[i]);
+                }
+            }
         }
 
         <div class="materials-header-row">
@@ -511,6 +572,13 @@
                                             <i class="bi bi-@(GetCategoryIcon(product.CategoryName))"></i>
                                             @(product.CategoryName ?? "Phế liệu")
                                         </span>
+
+                                        @if (product.IsFeatured)
+                                        {
+                                            <span class="materials-featured-badge">
+                                                <i class="bi bi-star-fill"></i> Nổi bật
+                                            </span>
+                                        }
                                     </div>
 
                                     <div class="materials-card-body">
@@ -561,6 +629,13 @@
                                                 <i class="bi bi-@(GetCategoryIcon(product.CategoryName))"></i>
                                                 @(product.CategoryName ?? "Phế liệu")
                                             </span>
+
+                                            @if (product.IsFeatured)
+                                            {
+                                                <span class="materials-featured-badge">
+                                                    <i class="bi bi-star-fill"></i> Nổi bật
+                                                </span>
+                                            }
                                         </div>
 
                                         <div class="materials-card-body">

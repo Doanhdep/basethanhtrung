@@ -259,7 +259,8 @@ public class AdminController : Controller
         {
             product = new Product
             {
-                CreatedAt = now
+                CreatedAt = now,
+                UpdatedAt = now
             };
             _context.Products.Add(product);
         }
@@ -2495,8 +2496,8 @@ public class AdminController : Controller
         _memoryCache.Remove(SiteCacheKeys.HomeProducts);
         _memoryCache.Remove(SiteCacheKeys.ProductCategoryNames);
 
-        await _outputCacheStore.EvictByTagAsync(SiteCacheKeys.ProductOutputTag, HttpContext.RequestAborted);
-        await _outputCacheStore.EvictByTagAsync(SiteCacheKeys.HomeOutputTag, HttpContext.RequestAborted);
+        await _outputCacheStore.EvictByTagAsync(SiteCacheKeys.ProductOutputTag, CancellationToken.None);
+        await _outputCacheStore.EvictByTagAsync(SiteCacheKeys.HomeOutputTag, CancellationToken.None);
     }
 
     private async Task InvalidateBannerCachesAsync()

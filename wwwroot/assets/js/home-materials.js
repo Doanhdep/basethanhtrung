@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let hoverRotationTimers = new WeakMap();
 
     const swiperSelectors = [
-        { swiper: '.materials-row1-swiper', pagination: '.materials-row1-pagination' },
+        { swiper: '.materials-row1-swiper', pagination: null },
         { swiper: '.materials-row2-swiper', pagination: '.materials-row2-pagination' },
         { swiper: '.materials-grid-swiper', pagination: '.materials-products-pagination' }
     ];

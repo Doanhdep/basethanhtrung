@@ -14,7 +14,7 @@ namespace WebThuMuaPheLieu.Controllers
     {
         private const int HomeProductCount = 32;
 
-        private static readonly TimeSpan HomeProductsCacheDuration = TimeSpan.FromMinutes(10);
+        private static readonly TimeSpan HomeProductsCacheDuration = TimeSpan.FromMinutes(3);
 
         private readonly AppDbContext _context;
         private readonly IBannerInjectHelper _bannerInjectHelper;
@@ -69,8 +69,8 @@ namespace WebThuMuaPheLieu.Controllers
                 var rows = await _context.Products
                     .AsNoTracking()
                     .Where(p => p.Status == "active")
-                    .OrderByDescending(p => p.IsFeatured)
-                    .ThenByDescending(p => p.CreatedAt)
+                    .OrderByDescending(p => p.IsFeatured == true)
+                    .ThenByDescending(p => p.UpdatedAt ?? p.CreatedAt)
                     .Take(HomeProductCount)
                     .Select(p => new
                     {
